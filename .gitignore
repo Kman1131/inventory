@@ -55,5 +55,16 @@ ehthumbs.db
 
 # ── Temp / Claude session files ────────────────────────────────────────────────
 tmpclaude*
+tmpclaude-2f5e-cwd
+tmpclaude-3f1f-cwd
+tmpclaude-5a40-cwd
+tmpclaude-7a63-cwd
+tmpclaude-41c8-cwd
+tmpclaude-66f3-cwd
+tmpclaude-305a-cwd
+tmpclaude-850d-cwd
+tmpclaude-a851-cwd
+tmpclaude-c5ae-cwd
+tmpclaude-f326-cwd
 *.tmp
 *.temp
