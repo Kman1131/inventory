@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { STORAGE_KEYS, DEFAULT_PORT } from '../config/api';
+import { DEFAULT_PORT, STORAGE_KEYS, getApiBaseUrl } from '../config/api';
 
 const COLORS = {
   primary: '#1a237e',
@@ -42,7 +42,8 @@ export function ReportScreen() {
 
       // Use downloadAsync to avoid needing a Buffer polyfill.
       // API key is passed as query param since downloadAsync doesn't support headers.
-      const downloadUrl = `http://${ip}:${DEFAULT_PORT}/reports/stock?apikey=${encodeURIComponent(apiKey)}`;
+      const baseUrl = await getApiBaseUrl();
+      const downloadUrl = `${baseUrl}/reports/stock?apikey=${encodeURIComponent(apiKey)}`;
       const fileUri = `${FileSystem.cacheDirectory}stock-report-${Date.now()}.pdf`;
 
       const result = await FileSystem.downloadAsync(downloadUrl, fileUri);
@@ -146,6 +147,7 @@ export function ReportScreen() {
           <Text style={styles.infoItem}>2. The server generates a PDF from the latest stock data</Text>
           <Text style={styles.infoItem}>3. Your phone's share sheet opens</Text>
           <Text style={styles.infoItem}>4. Select your Wi-Fi printer (AirPrint / Google Cloud Print)</Text>
+          <Text style={styles.infoItem}>5. Default backend port is {DEFAULT_PORT} unless you changed it in Settings</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

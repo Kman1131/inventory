@@ -56,11 +56,12 @@ export default function SettingsPage() {
           <label className="label">Server URL</label>
           <input
             className="input"
-            placeholder="http://192.168.1.x:3000"
+            placeholder="/api or http://192.168.1.x:3000"
             {...register('apiUrl', { required: true })}
           />
           <p className="mt-1 text-xs text-gray-400">
-            The local IP address of your PC running the backend. E.g. <code className="bg-gray-100 px-1 rounded">http://192.168.1.50:3000</code>
+            Leave this as <code className="bg-gray-100 px-1 rounded">/api</code> when using the bundled Docker web app.
+            Use a full URL such as <code className="bg-gray-100 px-1 rounded">http://192.168.1.50:3000</code> only when pointing at a different backend.
           </p>
         </div>
 

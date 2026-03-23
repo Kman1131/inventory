@@ -3,24 +3,36 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const STORAGE_KEYS = {
   SERVER_IP: '@server_ip',
+  SERVER_PORT: '@server_port',
   API_KEY: '@api_key',
 } as const;
 
-export const DEFAULT_PORT = 3000;
+export const DEFAULT_PORT = '3000';
 
 let apiInstance: AxiosInstance | null = null;
 
-export async function getApiClient(): Promise<AxiosInstance> {
-  const [ip, apiKey] = await AsyncStorage.multiGet([
+export async function getApiBaseUrl(): Promise<string> {
+  const [[, ip], [, port]] = await AsyncStorage.multiGet([
     STORAGE_KEYS.SERVER_IP,
-    STORAGE_KEYS.API_KEY,
+    STORAGE_KEYS.SERVER_PORT,
   ]);
 
-  const serverIp = ip[1] ?? '192.168.1.100';
-  const key = apiKey[1] ?? '';
+  const serverIp = ip?.trim() || '192.168.1.100';
+  const serverPort = port?.trim() || DEFAULT_PORT;
+
+  return `http://${serverIp}:${serverPort}`;
+}
+
+export async function getApiClient(): Promise<AxiosInstance> {
+  const [baseUrl, apiKey] = await Promise.all([
+    getApiBaseUrl(),
+    AsyncStorage.getItem(STORAGE_KEYS.API_KEY),
+  ]);
+
+  const key = apiKey?.trim() ?? '';
 
   apiInstance = axios.create({
-    baseURL: `http://${serverIp}:${DEFAULT_PORT}`,
+    baseURL: baseUrl,
     headers: {
       'x-api-key': key,
       'Content-Type': 'application/json',

@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useConfig } from '../hooks/useConfig';
-import { getApiClient } from '../config/api';
+import { DEFAULT_PORT, getApiClient } from '../config/api';
 
 const COLORS = {
   primary: '#1a237e',
@@ -19,8 +19,9 @@ const COLORS = {
 };
 
 export function SettingsScreen() {
-  const { serverIp, apiKey, isLoaded, setServerIp, setApiKey } = useConfig();
+  const { serverIp, serverPort, apiKey, isLoaded, setServerIp, setServerPort, setApiKey } = useConfig();
   const [ipInput, setIpInput] = useState('');
+  const [portInput, setPortInput] = useState(DEFAULT_PORT);
   const [keyInput, setKeyInput] = useState('');
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<'success' | 'error' | null>(null);
@@ -28,12 +29,16 @@ export function SettingsScreen() {
   React.useEffect(() => {
     if (isLoaded) {
       setIpInput(serverIp);
+      setPortInput(serverPort || DEFAULT_PORT);
       setKeyInput(apiKey);
     }
-  }, [isLoaded, serverIp, apiKey]);
+  }, [isLoaded, serverIp, serverPort, apiKey]);
+
+  const normalizedPort = portInput.trim() || DEFAULT_PORT;
 
   const handleSave = async () => {
     await setServerIp(ipInput.trim());
+    await setServerPort(normalizedPort);
     await setApiKey(keyInput.trim());
     Alert.alert('Saved', 'Server settings have been saved.');
   };
@@ -43,6 +48,7 @@ export function SettingsScreen() {
     setTestResult(null);
     try {
       await setServerIp(ipInput.trim());
+      await setServerPort(normalizedPort);
       await setApiKey(keyInput.trim());
       const client = await getApiClient();
       await client.get('/health');
@@ -68,6 +74,7 @@ export function SettingsScreen() {
         <Text style={styles.title}>Server Settings</Text>
         <Text style={styles.description}>
           Enter the local IP address of the PC running the inventory backend.{'\n'}
+          If Docker maps the backend to a different host port, enter that port below.{'\n'}
           Find it by running{' '}
           <Text style={styles.code}>ipconfig</Text>
           {' '}on Windows or{' '}
@@ -82,6 +89,17 @@ export function SettingsScreen() {
             value={ipInput}
             onChangeText={setIpInput}
             placeholder="e.g. 192.168.1.100"
+            keyboardType="numeric"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+
+          <Text style={styles.label}>Server Port</Text>
+          <TextInput
+            style={styles.input}
+            value={portInput}
+            onChangeText={setPortInput}
+            placeholder={DEFAULT_PORT}
             keyboardType="numeric"
             autoCapitalize="none"
             autoCorrect={false}
@@ -103,8 +121,8 @@ export function SettingsScreen() {
           <View style={[styles.resultBox, testResult === 'success' ? styles.resultOk : styles.resultErr]}>
             <Text style={styles.resultText}>
               {testResult === 'success'
-                ? '✓ Connected successfully'
-                : '✗ Could not connect. Check IP and API key.'}
+                ? 'Connected successfully'
+                : 'Could not connect. Check IP, port, and API key.'}
             </Text>
           </View>
         )}
@@ -127,7 +145,8 @@ export function SettingsScreen() {
         <View style={styles.infoBox}>
           <Text style={styles.infoTitle}>Current config</Text>
           <Text style={styles.infoRow}>IP: {serverIp || '(not set)'}</Text>
-          <Text style={styles.infoRow}>API Key: {apiKey ? '••••••••' : '(not set)'}</Text>
+          <Text style={styles.infoRow}>Port: {serverPort || DEFAULT_PORT}</Text>
+          <Text style={styles.infoRow}>API Key: {apiKey ? 'configured' : '(not set)'}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

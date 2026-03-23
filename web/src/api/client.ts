@@ -9,10 +9,16 @@ export const STORAGE_KEYS = {
   API_KEY: 'inv_api_key',
 } as const;
 
+const DEFAULT_API_URL = (import.meta.env.VITE_API_URL?.trim() || '/api').replace(/\/$/, '');
+const DEFAULT_API_KEY = 'inventory-secret-key';
+
 export function getSettings() {
+  const storedApiUrl = localStorage.getItem(STORAGE_KEYS.API_URL)?.trim();
+  const storedApiKey = localStorage.getItem(STORAGE_KEYS.API_KEY)?.trim();
+
   return {
-    apiUrl: localStorage.getItem(STORAGE_KEYS.API_URL) ?? 'http://localhost:3000',
-    apiKey: localStorage.getItem(STORAGE_KEYS.API_KEY) ?? 'inventory-secret-key',
+    apiUrl: storedApiUrl || DEFAULT_API_URL,
+    apiKey: storedApiKey || DEFAULT_API_KEY,
   };
 }
 
