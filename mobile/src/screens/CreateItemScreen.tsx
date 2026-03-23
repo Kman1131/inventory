@@ -105,6 +105,10 @@ export function CreateItemScreen({ route }: Props) {
       Alert.alert('Validation', 'SKU and Name are required.');
       return;
     }
+    if (!locationId) {
+      Alert.alert('Validation', 'Please select a location for this item.');
+      return;
+    }
     setSaving(true);
     try {
       await apiPost('/items', {
@@ -165,8 +169,8 @@ export function CreateItemScreen({ route }: Props) {
 
           {/* Location picker */}
           <View style={styles.field}>
-            <Text style={styles.label}>Location</Text>
-            <TouchableOpacity style={styles.picker} onPress={() => setShowLocPicker(true)}>
+            <Text style={styles.label}>Location *</Text>
+            <TouchableOpacity style={[styles.picker, !selectedLoc && styles.pickerError]} onPress={() => setShowLocPicker(true)}>
               <Text style={[styles.pickerText, !selectedLoc && styles.pickerPlaceholder]}>
                 {selectedLoc ? locLabel(selectedLoc) : 'Select locationâ€¦'}
               </Text>
