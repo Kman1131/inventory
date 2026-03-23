@@ -237,6 +237,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 10, backgroundColor: '#fafafa',
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
+  pickerError: { borderColor: '#e53935', borderWidth: 1.5 },
   pickerText: { fontSize: 15, color: '#222', flex: 1 },
   pickerPlaceholder: { color: '#aaa' },
   pickerChevron: { fontSize: 12, color: '#999', marginLeft: 8 },
