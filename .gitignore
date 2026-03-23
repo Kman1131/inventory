@@ -37,6 +37,7 @@ pnpm-debug.log*
 expo-env.d.ts
 android/
 ios/
+*.apk
 
 # ── OS generated files ─────────────────────────────────────────────────────────
 .DS_Store

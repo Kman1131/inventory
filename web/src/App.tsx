@@ -6,6 +6,7 @@ import CategoriesPage from './pages/CategoriesPage'
 import LocationsPage from './pages/LocationsPage'
 import ReportsPage from './pages/ReportsPage'
 import SettingsPage from './pages/SettingsPage'
+import AdjustmentsPage from './pages/AdjustmentsPage'
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="categories" element={<CategoriesPage />} />
           <Route path="locations" element={<LocationsPage />} />
           <Route path="reports" element={<ReportsPage />} />
+          <Route path="adjustments" element={<AdjustmentsPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
