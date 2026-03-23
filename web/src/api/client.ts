@@ -114,6 +114,18 @@ export const api = {
     const { apiUrl, apiKey } = getSettings();
     return `${apiUrl}/purchase-orders/${id}/pdf?apikey=${encodeURIComponent(apiKey)}`;
   },
+  receivePurchaseOrder:  (id: string) => unwrap<{ po: PurchaseOrder; transactions_created: number }>(client().post(`/purchase-orders/${id}/receive`, {})),
+
+  // ── Labels ─────────────────────────────────────────────────────────────────
+  getLabelsUrl: (ids: string[]) => {
+    const { apiUrl, apiKey } = getSettings();
+    return `${apiUrl}/reports/labels?ids=${ids.join(',')}&apikey=${encodeURIComponent(apiKey)}`;
+  },
+  getAllLabelsUrl: () => {
+    const { apiUrl, apiKey } = getSettings();
+    return `${apiUrl}/reports/labels?all=1&apikey=${encodeURIComponent(apiKey)}`;
+  },
+  getUnassignedItems: () => unwrap<InventoryItem[]>(client().get('/items?unassigned=1')),
 
   // ── App Settings (SMTP etc) ────────────────────────────────────────────────
   getAppSettings:  () => unwrap<Record<string, string>>(client().get('/settings')),

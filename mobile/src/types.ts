@@ -94,3 +94,15 @@ export interface PurchaseOrder {
   supplier_name?: string;
   items?: PurchaseOrderItem[];
 }
+
+export interface ItemLocation {
+  id: string;
+  item_id: string;
+  location_id: string;
+  quantity: number;
+  updated_at: string;
+  // Joined fields
+  zone?: string;
+  aisle?: string | null;
+  bin?: string | null;
+}

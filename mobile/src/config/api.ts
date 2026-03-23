@@ -72,7 +72,7 @@ export async function apiDelete(path: string): Promise<void> {
 
 // ── Items ────────────────────────────────────────────────────────────────────
 import type {
-  InventoryItem, Category, Location, Supplier, Transaction, PurchaseOrder, PurchaseOrderItem,
+  InventoryItem, Category, Location, Supplier, Transaction, PurchaseOrder, PurchaseOrderItem, ItemLocation,
 } from '../types';
 
 export const itemsApi = {
@@ -127,5 +127,9 @@ export const purchaseOrdersApi = {
     apiPut<PurchaseOrder>(`/purchase-orders/${id}`, data),
   remove: (id: string) => apiDelete(`/purchase-orders/${id}`),
   autoGenerate: () => apiPost<PurchaseOrder[]>('/purchase-orders/auto-generate', {}),
-  sendEmail: (id: string) => apiPost<{ message: string }>(`/purchase-orders/${id}/send-email`, {}),
+  sendEmail: (id: string) => apiPost<{ message: string }>(`/purchase-orders/${id}/send-email`, {}),  receive: (id: string) => apiPost<{ po: PurchaseOrder; transactions_created: number }>(`/purchase-orders/${id}/receive`, {}),
 };
+
+// ── Item Locations ──────────────────────────────────────────────────────────────────
+export const itemLocationsApi = {
+  list: (itemId: string) => apiGet<ItemLocation[]>(`/item-locations/${itemId}`),};

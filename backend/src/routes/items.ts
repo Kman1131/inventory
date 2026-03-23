@@ -12,8 +12,10 @@ async function generateQRCodeData(itemId: string): Promise<string> {
 }
 
 // GET /items — list all items with joined category + location + supplier
-router.get('/', (_req: Request, res: Response) => {
+// Supports: ?unassigned=1 to only return items without a location
+router.get('/', (req: Request, res: Response) => {
   try {
+    const extra = req.query.unassigned ? 'WHERE items.location_id IS NULL' : '';
     const items = db.prepare(`
       SELECT
         items.*,
@@ -26,6 +28,7 @@ router.get('/', (_req: Request, res: Response) => {
       LEFT JOIN categories ON items.category_id = categories.id
       LEFT JOIN locations ON items.location_id = locations.id
       LEFT JOIN suppliers ON items.supplier_id = suppliers.id
+      ${extra}
       ORDER BY items.name ASC
     `).all() as InventoryItem[];
     res.json({ success: true, data: items });

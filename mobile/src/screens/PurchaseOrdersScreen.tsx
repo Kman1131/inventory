@@ -243,8 +243,7 @@ export function PurchaseOrdersScreen() {
     })));
   };
 
-  const handleDelete = (po: PurchaseOrder) => {
-    Alert.alert('Delete PO', `Remove ${po.po_number}?`, [
+  const handleDelete = (po: PurchaseOrder) => {    Alert.alert('Delete PO', `Remove ${po.po_number}?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete', style: 'destructive',

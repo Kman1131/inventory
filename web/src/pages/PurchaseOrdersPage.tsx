@@ -19,6 +19,7 @@ export default function PurchaseOrdersPage() {
   const [selected, setSelected] = useState<PurchaseOrder | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<PurchaseOrder | null>(null)
   const [sendingId, setSendingId] = useState<string | null>(null)
+  const [receivingId, setReceivingId] = useState<string | null>(null)
 
   const { data: orders = [], isLoading } = useQuery<PurchaseOrder[]>({
     queryKey: ['purchase-orders'],
@@ -84,6 +85,22 @@ export default function PurchaseOrdersPage() {
       toast.error((e as Error).message)
     } finally {
       setSendingId(null)
+    }
+  }
+
+  const handleReceive = async (po: PurchaseOrder) => {
+    if (!confirm(`Receive all items on PO ${po.po_number}? This will create IN transactions for each line item and mark the PO as received.`)) return
+    setReceivingId(po.id)
+    try {
+      const res = await api.receivePurchaseOrder(po.id)
+      qc.invalidateQueries({ queryKey: ['purchase-orders'] })
+      qc.invalidateQueries({ queryKey: ['items'] })
+      qc.invalidateQueries({ queryKey: ['low-stock'] })
+      toast.success(`Received ${res.transactions_created} item line${res.transactions_created !== 1 ? 's' : ''} from ${po.po_number}`)
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setReceivingId(null)
     }
   }
 
@@ -169,6 +186,16 @@ export default function PurchaseOrdersPage() {
                       >
                         {sendingId === po.id ? '⟳ Sending…' : '✉ Email'}
                       </button>
+                      {(po.status === 'draft' || po.status === 'sent') && (
+                        <button
+                          className="text-xs text-green-600 hover:text-green-800 font-medium disabled:opacity-50"
+                          onClick={() => handleReceive(po)}
+                          disabled={receivingId === po.id}
+                          title="Receive all items and update stock"
+                        >
+                          {receivingId === po.id ? '⟳ Receiving…' : '📥 Receive'}
+                        </button>
+                      )}
                       <button
                         className="text-xs text-primary-700 hover:text-primary-900 font-medium"
                         onClick={() => openEdit(po)}

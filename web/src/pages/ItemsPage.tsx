@@ -6,6 +6,7 @@ import ItemModal from '../components/ItemModal'
 import TransactionModal from '../components/TransactionModal'
 import ConfirmDialog from '../components/ConfirmDialog'
 import QRModal from '../components/QRModal'
+import ItemDetailModal from '../components/ItemDetailModal'
 import type { InventoryItem, ItemFormData, TransactionFormData } from '../types'
 
 export default function ItemsPage() {
@@ -17,6 +18,9 @@ export default function ItemsPage() {
   const [search, setSearch] = useState('')
   const [filterCat, setFilterCat] = useState('')
   const [filterStock, setFilterStock] = useState<'all' | 'low' | 'ok'>('all')
+  const [filterLocation, setFilterLocation] = useState<'all' | 'unassigned'>('all')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [detailItem, setDetailItem] = useState<InventoryItem | null>(null)
 
   const filtered = useMemo(() => items.filter(item => {
     const q = search.toLowerCase()
@@ -25,8 +29,18 @@ export default function ItemsPage() {
     const matchStock = filterStock === 'all' ? true
       : filterStock === 'low' ? item.quantity < item.min_threshold
       : item.quantity >= item.min_threshold
-    return matchText && matchCat && matchStock
-  }), [items, search, filterCat, filterStock])
+    const matchLoc = filterLocation === 'all' ? true : !item.location_id
+    return matchText && matchCat && matchStock && matchLoc
+  }), [items, search, filterCat, filterStock, filterLocation])
+
+  const toggleSelect = (id: string) => setSelectedIds(prev => {
+    const next = new Set(prev)
+    next.has(id) ? next.delete(id) : next.add(id)
+    return next
+  })
+  const toggleAll = () => setSelectedIds(prev =>
+    prev.size === filtered.length ? new Set() : new Set(filtered.map(i => i.id))
+  )
 
   // Modal state
   const [itemModal, setItemModal]   = useState(false)
@@ -34,7 +48,6 @@ export default function ItemsPage() {
   const [txItem, setTxItem]         = useState<InventoryItem | null>(null)
   const [qrItem, setQrItem]         = useState<InventoryItem | null>(null)
   const [deleteItem, setDeleteItem] = useState<InventoryItem | null>(null)
-
   // Mutations
   const createMutation = useMutation({
     mutationFn: (data: Partial<ItemFormData>) => api.createItem(data),
@@ -101,6 +114,31 @@ export default function ItemsPage() {
             </button>
           ))}
         </div>
+        <button
+          onClick={() => setFilterLocation(v => v === 'unassigned' ? 'all' : 'unassigned')}
+          className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+            filterLocation === 'unassigned'
+              ? 'bg-amber-600 text-white border-amber-600'
+              : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+          }`}
+        >
+          📦 Unassigned
+        </button>
+        {selectedIds.size > 0 && (
+          <button
+            className="btn-secondary text-xs flex items-center gap-1"
+            onClick={() => window.open(api.getLabelsUrl(Array.from(selectedIds)), '_blank')}
+          >
+            🏷 Print {selectedIds.size} Label{selectedIds.size !== 1 ? 's' : ''}
+          </button>
+        )}
+        <button
+          className="btn-secondary text-xs"
+          onClick={() => window.open(api.getAllLabelsUrl(), '_blank')}
+          title="Print all item labels"
+        >
+          🏷 All Labels
+        </button>
         <span className="text-xs text-gray-400 ml-auto">{filtered.length} result{filtered.length !== 1 ? 's' : ''}</span>
       </div>
 
@@ -110,6 +148,14 @@ export default function ItemsPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
+                <th className="table-th w-8">
+                  <input
+                    type="checkbox"
+                    className="rounded"
+                    checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                    onChange={toggleAll}
+                  />
+                </th>
                 <th className="table-th">SKU</th>
                 <th className="table-th">Name</th>
                 <th className="table-th">Category</th>
@@ -124,7 +170,7 @@ export default function ItemsPage() {
             <tbody className="divide-y divide-gray-50">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-sm text-gray-400">
+                  <td colSpan={10} className="py-12 text-center text-sm text-gray-400">
                     No items found
                   </td>
                 </tr>
@@ -135,13 +181,29 @@ export default function ItemsPage() {
                   : '—'
                 return (
                   <tr key={item.id} className={`hover:bg-gray-50 transition-colors ${isLow ? 'bg-red-50/40' : ''}`}>
+                    <td className="table-td w-8">
+                      <input
+                        type="checkbox"
+                        className="rounded"
+                        checked={selectedIds.has(item.id)}
+                        onChange={() => toggleSelect(item.id)}
+                        onClick={e => e.stopPropagation()}
+                      />
+                    </td>
                     <td className="table-td font-mono text-xs text-gray-500">{item.sku}</td>
                     <td className="table-td">
-                      <div className="font-medium text-gray-900">{item.name}</div>
-                      {item.description && <div className="text-xs text-gray-400 truncate max-w-xs">{item.description}</div>}
+                      <button
+                        className="text-left hover:text-primary-700 transition-colors"
+                        onClick={() => setDetailItem(item)}
+                      >
+                        <div className="font-medium text-gray-900 hover:text-primary-700">{item.name}</div>
+                        {item.description && <div className="text-xs text-gray-400 truncate max-w-xs">{item.description}</div>}
+                      </button>
                     </td>
                     <td className="table-td text-gray-500">{item.category_name ?? '—'}</td>
-                    <td className="table-td text-xs text-gray-500">{locLabel}</td>
+                    <td className="table-td text-xs text-gray-500">
+                      {item.location_zone ? locLabel : <span className="text-amber-500">⚠ None</span>}
+                    </td>
                     <td className="table-td text-right">
                       <span className={`font-bold text-base ${isLow ? 'text-red-600' : 'text-gray-900'}`}>{item.quantity}</span>
                     </td>
@@ -163,6 +225,11 @@ export default function ItemsPage() {
                           title="View QR Code"
                         >▦</button>
                         <button
+                          onClick={() => window.open(api.getLabelsUrl([item.id]), '_blank')}
+                          className="btn-ghost btn-sm rounded-lg"
+                          title="Print Label"
+                        >🏷</button>
+                        <button
                           onClick={() => setEditItem(item)}
                           className="btn-ghost btn-sm rounded-lg"
                           title="Edit"
@@ -183,6 +250,12 @@ export default function ItemsPage() {
       </div>
 
       {/* Modals */}
+      <ItemDetailModal
+        open={!!detailItem}
+        onClose={() => setDetailItem(null)}
+        item={detailItem}
+        onDeleted={() => setDetailItem(null)}
+      />
       <ItemModal
         open={itemModal}
         onClose={() => setItemModal(false)}

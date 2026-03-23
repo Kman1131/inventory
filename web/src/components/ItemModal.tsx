@@ -130,15 +130,16 @@ export default function ItemModal({ open, onClose, onSubmit, item, loading }: It
           </div>
           {/* Location */}
           <div>
-            <label className="label">Location</label>
-            <select className="input" {...register('location_id')}>
-              <option value="">— None —</option>
+            <label className="label">Location *</label>
+            <select className="input" {...register('location_id', { required: 'Location is required' })}>
+              <option value="">— Select a location —</option>
               {locations.map(l => (
                 <option key={l.id} value={l.id}>
                   {l.zone}{l.aisle ? ` › ${l.aisle}` : ''}{l.bin ? ` › ${l.bin}` : ''}
                 </option>
               ))}
             </select>
+            {errors.location_id && <p className="mt-1 text-xs text-red-600">{errors.location_id.message}</p>}
           </div>
         </div>
 

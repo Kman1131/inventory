@@ -320,6 +320,59 @@ router.post('/:id/send-email', async (req: Request, res: Response) => {
   }
 });
 
+// POST /purchase-orders/:id/receive — receive all items, create IN transactions
+router.post('/:id/receive', (req: Request, res: Response) => {
+  try {
+    const po = db.prepare('SELECT * FROM purchase_orders WHERE id = ?').get(req.params.id) as PurchaseOrder | undefined;
+    if (!po) {
+      res.status(404).json({ success: false, error: 'Purchase order not found' }); return;
+    }
+    if (po.status === 'received') {
+      res.status(400).json({ success: false, error: 'Purchase order already received' }); return;
+    }
+    if (po.status === 'cancelled') {
+      res.status(400).json({ success: false, error: 'Cannot receive a cancelled purchase order' }); return;
+    }
+
+    const poItems = db.prepare(
+      'SELECT * FROM purchase_order_items WHERE purchase_order_id = ?'
+    ).all(req.params.id) as PurchaseOrderItem[];
+
+    const now = new Date().toISOString();
+    const deviceId = (req.body?.device_id as string) ?? 'web';
+
+    const receiveAll = db.transaction(() => {
+      let count = 0;
+      for (const poItem of poItems) {
+        if (!poItem.item_id) continue;
+        const invItem = db.prepare('SELECT * FROM items WHERE id = ?').get(poItem.item_id) as InventoryItem | undefined;
+        if (!invItem) continue;
+        const newQty = invItem.quantity + poItem.quantity_ordered;
+        const txId = uuidv4();
+        db.prepare(`
+          INSERT INTO transactions (id, item_id, type, quantity_delta, notes, device_id, created_at)
+          VALUES (?, ?, 'IN', ?, ?, ?, ?)
+        `).run(txId, poItem.item_id, poItem.quantity_ordered, `Received from PO ${po.po_number}`, deviceId, now);
+        db.prepare('UPDATE items SET quantity = ?, updated_at = ? WHERE id = ?').run(newQty, now, poItem.item_id);
+        count++;
+      }
+      db.prepare("UPDATE purchase_orders SET status = 'received', updated_at = ? WHERE id = ?").run(now, req.params.id);
+      return count;
+    });
+
+    const txCount = receiveAll();
+    const updated = db.prepare(`
+      SELECT po.*, s.name as supplier_name, s.email as supplier_email
+      FROM purchase_orders po LEFT JOIN suppliers s ON po.supplier_id = s.id
+      WHERE po.id = ?
+    `).get(req.params.id) as PurchaseOrder;
+    (updated as any).items = poItems;
+    res.json({ success: true, data: { po: updated, transactions_created: txCount } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: (err as Error).message });
+  }
+});
+
 // DELETE /purchase-orders/:id
 router.delete('/:id', (req: Request, res: Response) => {
   try {

@@ -7,8 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { apiGet, apiPost, itemsApi, categoriesApi, locationsApi, suppliersApi } from '../config/api';
-import type { InventoryItem, Transaction, TransactionType, Category, Location, Supplier } from '../types';
+import { apiGet, apiPost, itemsApi, categoriesApi, locationsApi, suppliersApi, itemLocationsApi } from '../config/api';
+import type { InventoryItem, Transaction, TransactionType, Category, Location, Supplier, ItemLocation } from '../types';
 import type { RootStackParamList } from '../../App';
 
 type Route = RouteProp<RootStackParamList, 'ItemDetail'>;
@@ -204,6 +204,7 @@ export function ItemDetailScreen() {
 
   const [item, setItem] = useState<InventoryItem | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [itemLocations, setItemLocations] = useState<ItemLocation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -218,12 +219,14 @@ export function ItemDetailScreen() {
     setLoading(true);
     setError(null);
     try {
-      const [itemData, txData] = await Promise.all([
+      const [itemData, txData, locsData] = await Promise.all([
         apiGet<InventoryItem>(`/items/${itemId}`),
         apiGet<Transaction[]>(`/transactions/${itemId}`),
+        itemLocationsApi.list(itemId),
       ]);
       setItem(itemData);
       setTransactions(txData);
+      setItemLocations(locsData);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -365,6 +368,21 @@ export function ItemDetailScreen() {
               Location: {[item.location_zone, item.location_aisle, item.location_bin].filter(Boolean).join(' › ')}
             </Text>
           )}
+
+          {/* All locations breakdown */}
+          {itemLocations.length > 0 && (
+            <View style={styles.locationsSection}>
+              <Text style={styles.locationsSectionTitle}>Stock by Location</Text>
+              {itemLocations.map(il => (
+                <View key={il.id} style={styles.locationRow}>
+                  <Text style={styles.locationName}>
+                    📍 {[il.zone, il.aisle, il.bin].filter(Boolean).join(' › ')}
+                  </Text>
+                  <Text style={styles.locationQty}>{il.quantity} units</Text>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* Record Transaction */}
@@ -483,6 +501,13 @@ const styles = StyleSheet.create({
   statusOk: { backgroundColor: '#e8f5e9' },
   statusText: { fontWeight: '700', fontSize: 13 },
   meta: { fontSize: 12, color: COLORS.subtext, marginTop: 4 },
+  locationsSection: {
+    marginTop: 12, borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 12,
+  },
+  locationsSectionTitle: { fontSize: 12, fontWeight: '700', color: COLORS.subtext, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
+  locationRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  locationName: { fontSize: 12, color: COLORS.text, flex: 1 },
+  locationQty: { fontSize: 12, fontWeight: '700', color: COLORS.primary },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: COLORS.primary, marginBottom: 12 },
   typeRow: { flexDirection: 'row', marginBottom: 12, gap: 8 },
   typeBtn: {
