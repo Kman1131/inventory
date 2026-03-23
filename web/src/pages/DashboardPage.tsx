@@ -15,6 +15,14 @@ export default function DashboardPage() {
     queryKey: ['categories'],
     queryFn: api.getCategories,
   })
+  const { data: suppliers = [] } = useQuery({
+    queryKey: ['suppliers'],
+    queryFn: api.getSuppliers,
+  })
+  const { data: purchaseOrders = [] } = useQuery({
+    queryKey: ['purchase-orders'],
+    queryFn: api.getPurchaseOrders,
+  })
 
   if (isLoading) {
     return (
@@ -63,7 +71,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-6">
         <StatCard title="Total Items"     value={items.length}        icon="📦" />
         <StatCard
           title="Low Stock"
@@ -79,6 +87,14 @@ export default function DashboardPage() {
           color="green"
         />
         <StatCard title="Categories" value={categories.length} icon="🏷️" />
+        <StatCard title="Suppliers" value={suppliers.length} icon="🏢" />
+        <StatCard
+          title="Open POs"
+          value={purchaseOrders.filter(p => p.status === 'draft' || p.status === 'sent').length}
+          icon="🛒"
+          color={purchaseOrders.some(p => p.status === 'draft') ? 'red' : 'green'}
+          subtitle={purchaseOrders.filter(p => p.status === 'draft').length > 0 ? 'Pending send' : 'None pending'}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">

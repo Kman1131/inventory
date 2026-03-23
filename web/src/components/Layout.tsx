@@ -3,13 +3,15 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '../api/client'
 
 const NAV = [
-  { to: '/',             label: 'Dashboard',   icon: '◼' },
-  { to: '/items',        label: 'Inventory',   icon: '📦' },
-  { to: '/adjustments',  label: 'Adjustments', icon: '⇅'  },
-  { to: '/categories',   label: 'Categories',  icon: '🏷️' },
-  { to: '/locations',    label: 'Locations',   icon: '📍' },
-  { to: '/reports',      label: 'Reports',     icon: '📄' },
-  { to: '/settings',     label: 'Settings',    icon: '⚙️' },
+  { to: '/',                label: 'Dashboard',       icon: '◼' },
+  { to: '/items',           label: 'Inventory',       icon: '📦' },
+  { to: '/adjustments',     label: 'Adjustments',     icon: '⇅'  },
+  { to: '/categories',      label: 'Categories',      icon: '🏷️' },
+  { to: '/locations',       label: 'Locations',       icon: '📍' },
+  { to: '/suppliers',       label: 'Suppliers',       icon: '🏢' },
+  { to: '/purchase-orders', label: 'Purchase Orders', icon: '🛒' },
+  { to: '/reports',         label: 'Reports',         icon: '📄' },
+  { to: '/settings',        label: 'Settings',        icon: '⚙️' },
 ]
 
 export default function Layout() {

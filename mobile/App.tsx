@@ -11,17 +11,29 @@ import { ScannerScreen } from './src/screens/ScannerScreen';
 import { ItemDetailScreen } from './src/screens/ItemDetailScreen';
 import { ReportScreen } from './src/screens/ReportScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
+import { SuppliersScreen } from './src/screens/SuppliersScreen';
+import { LocationsScreen } from './src/screens/LocationsScreen';
+import { CategoriesScreen } from './src/screens/CategoriesScreen';
+import { PurchaseOrdersScreen } from './src/screens/PurchaseOrdersScreen';
+import { CreateItemScreen } from './src/screens/CreateItemScreen';
+import { CreateSupplierScreen } from './src/screens/CreateSupplierScreen';
 
 // ── Navigation types ──────────────────────────────────────────────────────────
 
 export type RootStackParamList = {
   Tabs: undefined;
   ItemDetail: { itemId: string };
+  CreateItem: { sku?: string };
+  CreateSupplier: undefined;
 };
 
 type TabParamList = {
   Dashboard: undefined;
   Scanner: undefined;
+  Locations: undefined;
+  Categories: undefined;
+  Suppliers: undefined;
+  Orders: undefined;
   Report: undefined;
   Settings: undefined;
 };
@@ -42,6 +54,10 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
   const icons: Record<string, string> = {
     Dashboard: '📦',
     Scanner: '📷',
+    Locations: '📍',
+    Categories: '🏷️',
+    Suppliers: '🏢',
+    Orders: '📋',
     Report: '📄',
     Settings: '⚙️',
   };
@@ -77,7 +93,27 @@ function TabNavigator() {
       <Tab.Screen
         name="Scanner"
         component={ScannerScreen}
-        options={{ title: 'Scan QR Code', tabBarLabel: 'Scan' }}
+        options={{ title: 'Scan Barcode / QR', tabBarLabel: 'Scan' }}
+      />
+      <Tab.Screen
+        name="Locations"
+        component={LocationsScreen}
+        options={{ title: 'Locations', tabBarLabel: 'Locations' }}
+      />
+      <Tab.Screen
+        name="Categories"
+        component={CategoriesScreen}
+        options={{ title: 'Categories', tabBarLabel: 'Categories' }}
+      />
+      <Tab.Screen
+        name="Suppliers"
+        component={SuppliersScreen}
+        options={{ title: 'Suppliers', tabBarLabel: 'Suppliers' }}
+      />
+      <Tab.Screen
+        name="Orders"
+        component={PurchaseOrdersScreen}
+        options={{ title: 'Purchase Orders', tabBarLabel: 'Orders' }}
       />
       <Tab.Screen
         name="Report"
@@ -95,6 +131,12 @@ function TabNavigator() {
 
 // ── Root App ──────────────────────────────────────────────────────────────────
 
+const headerOpts = {
+  headerStyle: { backgroundColor: COLORS.primary },
+  headerTintColor: '#ffffff',
+  headerTitleStyle: { fontWeight: '700' as const },
+};
+
 export default function App() {
   return (
     <SafeAreaProvider>
@@ -109,12 +151,17 @@ export default function App() {
           <Stack.Screen
             name="ItemDetail"
             component={ItemDetailScreen}
-            options={{
-              title: 'Item Detail',
-              headerStyle: { backgroundColor: COLORS.primary },
-              headerTintColor: '#ffffff',
-              headerTitleStyle: { fontWeight: '700' },
-            }}
+            options={{ title: 'Item Detail', ...headerOpts }}
+          />
+          <Stack.Screen
+            name="CreateItem"
+            component={CreateItemScreen}
+            options={{ title: 'Add Item', ...headerOpts }}
+          />
+          <Stack.Screen
+            name="CreateSupplier"
+            component={CreateSupplierScreen}
+            options={{ title: 'Add Supplier', ...headerOpts }}
           />
         </Stack.Navigator>
       </NavigationContainer>

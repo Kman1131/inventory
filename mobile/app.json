@@ -13,14 +13,16 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.local.inventorymanager"
+      "bundleIdentifier": "com.local.inventorymanager",
+      "newArchEnabled": false
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1a237e"
       },
-      "package": "com.local.inventorymanager"
+      "package": "com.local.inventorymanager",
+      "newArchEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"

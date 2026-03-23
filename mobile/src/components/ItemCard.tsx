@@ -22,7 +22,7 @@ export function ItemCard({ item, onPress }: ItemCardProps) {
 
   return (
     <TouchableOpacity style={[styles.card, isLow && styles.cardLow]} onPress={onPress} activeOpacity={0.7}>
-      <View style={styles.leftBar} backgroundColor={isLow ? COLORS.lowStock : COLORS.okStock} />
+      <View style={[styles.leftBar, { backgroundColor: isLow ? COLORS.lowStock : COLORS.okStock }]} />
       <View style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.name} numberOfLines={1}>{item.name}</Text>

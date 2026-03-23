@@ -10,7 +10,12 @@ export interface Location {
   zone: string;
   aisle: string | null;
   bin: string | null;
+  parent_id: string | null;
   created_at: string;
+  // Joined from parent
+  parent_zone?: string | null;
+  parent_aisle?: string | null;
+  parent_bin?: string | null;
 }
 
 export interface InventoryItem {
@@ -23,6 +28,7 @@ export interface InventoryItem {
   price: number;
   category_id: string | null;
   location_id: string | null;
+  supplier_id: string | null;
   qr_code_data: string | null;
   created_at: string;
   updated_at: string;
@@ -31,6 +37,7 @@ export interface InventoryItem {
   location_zone?: string;
   location_aisle?: string;
   location_bin?: string;
+  supplier_name?: string;
 }
 
 export type TransactionType = 'IN' | 'OUT' | 'ADJUSTMENT';
@@ -49,4 +56,41 @@ export interface ApiResponse<T> {
   success: boolean;
   data?: T;
   error?: string;
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  contact_name: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type PurchaseOrderStatus = 'draft' | 'sent' | 'received' | 'cancelled';
+
+export interface PurchaseOrderItem {
+  id: string;
+  purchase_order_id: string;
+  item_id: string | null;
+  sku: string;
+  name: string;
+  quantity_ordered: number;
+  unit_price: number;
+  created_at: string;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  po_number: string;
+  supplier_id: string | null;
+  status: PurchaseOrderStatus;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  supplier_name?: string;
+  items?: PurchaseOrderItem[];
 }

@@ -1,16 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput,
-  TouchableOpacity, Alert, ActivityIndicator, Image,
+  TouchableOpacity, Alert, ActivityIndicator, Image, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp, NativeStackRouteProp } from '@react-navigation/native-stack';
-import { apiGet, apiPost } from '../config/api';
-import type { InventoryItem, Transaction, TransactionType } from '../types';
+import type { RouteProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { apiGet, apiPost, itemsApi, categoriesApi, locationsApi, suppliersApi } from '../config/api';
+import type { InventoryItem, Transaction, TransactionType, Category, Location, Supplier } from '../types';
 import type { RootStackParamList } from '../../App';
 
-type Route = NativeStackRouteProp<RootStackParamList, 'ItemDetail'>;
+type Route = RouteProp<RootStackParamList, 'ItemDetail'>;
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const COLORS = {
@@ -25,6 +26,176 @@ const COLORS = {
 };
 
 type TxType = TransactionType;
+
+// ── PickerModal helper (reused from CreateItemScreen pattern) ─────────────────
+function PickerModal<T extends { id: string; name?: string }>({
+  visible, title, items, labelKey, onSelect, onClose,
+}: {
+  visible: boolean; title: string; items: T[];
+  labelKey?: keyof T;
+  onSelect: (item: T | null) => void; onClose: () => void;
+}) {
+  const key = labelKey ?? ('name' as keyof T);
+  return (
+    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
+      <View style={editStyles.pickerOverlay}>
+        <View style={editStyles.pickerSheet}>
+          <Text style={editStyles.pickerTitle}>{title}</Text>
+          <ScrollView>
+            <TouchableOpacity style={editStyles.pickerItem} onPress={() => { onSelect(null); onClose(); }}>
+              <Text style={editStyles.pickerItemNone}>None</Text>
+            </TouchableOpacity>
+            {items.map(it => (
+              <TouchableOpacity key={it.id} style={editStyles.pickerItem} onPress={() => { onSelect(it); onClose(); }}>
+                <Text style={editStyles.pickerItemText}>{String(it[key] ?? it.id)}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ── Edit item modal ───────────────────────────────────────────────────────────
+function EditItemModal({
+  visible, item, onSaved, onClose,
+}: {
+  visible: boolean; item: InventoryItem;
+  onSaved: () => void; onClose: () => void;
+}) {
+  const [name, setName] = useState(item.name);
+  const [sku, setSku] = useState(item.sku);
+  const [description, setDescription] = useState(item.description ?? '');
+  const [price, setPrice] = useState(String(item.price));
+  const [minThreshold, setMinThreshold] = useState(String(item.min_threshold));
+  const [categoryId, setCategoryId] = useState<string | null>(item.category_id ?? null);
+  const [locationId, setLocationId] = useState<string | null>(item.location_id ?? null);
+  const [supplierId, setSupplierId] = useState<string | null>((item as any).supplier_id ?? null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [showCat, setShowCat] = useState(false);
+  const [showLoc, setShowLoc] = useState(false);
+  const [showSup, setShowSup] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (visible) {
+      setName(item.name); setSku(item.sku);
+      setDescription(item.description ?? '');
+      setPrice(String(item.price));
+      setMinThreshold(String(item.min_threshold));
+      setCategoryId(item.category_id ?? null);
+      setLocationId(item.location_id ?? null);
+      setSupplierId((item as any).supplier_id ?? null);
+      Promise.all([categoriesApi.list(), locationsApi.list(), suppliersApi.list()]).then(
+        ([c, l, s]) => { setCategories(c); setLocations(l); setSuppliers(s); },
+      );
+    }
+  }, [visible, item]);
+
+  const catLabel = (categoryId && categories.find(c => c.id === categoryId)?.name) || 'None';
+  const locLabel = (() => {
+    const loc = locationId ? locations.find(l => l.id === locationId) : null;
+    if (!loc) return 'None';
+    return [loc.zone, loc.aisle, loc.bin].filter(Boolean).join(' › ');
+  })();
+  const supLabel = (supplierId && suppliers.find(s => s.id === supplierId)?.name) || 'None';
+
+  const handleSave = async () => {
+    if (!name.trim()) { Alert.alert('Validation', 'Name is required.'); return; }
+    if (!sku.trim()) { Alert.alert('Validation', 'SKU is required.'); return; }
+    setSaving(true);
+    try {
+      await itemsApi.update(item.id, {
+        name: name.trim(), sku: sku.trim().toUpperCase(),
+        description: description.trim() || null,
+        price: parseFloat(price) || 0,
+        min_threshold: parseInt(minThreshold, 10) || 0,
+        category_id: categoryId ?? null,
+        location_id: locationId ?? null,
+        supplier_id: supplierId ?? null,
+      });
+      onSaved();
+      onClose();
+    } catch (e: any) {
+      Alert.alert('Error', e.message ?? 'Failed to save.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={editStyles.overlay}>
+        <View style={editStyles.sheet}>
+          <Text style={editStyles.title}>Edit Item</Text>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {[
+              { label: 'Name *', value: name, set: setName, placeholder: 'Widget A' },
+              { label: 'SKU *', value: sku, set: setSku, placeholder: 'WGT-001' },
+              { label: 'Description', value: description, set: setDescription, placeholder: 'Optional…', multi: true },
+              { label: 'Unit Price ($)', value: price, set: setPrice, placeholder: '0.00', keyboard: 'decimal-pad' },
+              { label: 'Min Threshold', value: minThreshold, set: setMinThreshold, placeholder: '5', keyboard: 'numeric' },
+            ].map(f => (
+              <View key={f.label}>
+                <Text style={editStyles.label}>{f.label}</Text>
+                <TextInput
+                  style={[editStyles.input, f.multi && editStyles.multiline]}
+                  value={f.value} onChangeText={f.set}
+                  placeholder={f.placeholder} placeholderTextColor="#aaa"
+                  keyboardType={(f as any).keyboard ?? 'default'}
+                  multiline={f.multi}
+                />
+              </View>
+            ))}
+
+            {[ 
+              { label: 'Category', lv: catLabel, onPress: () => setShowCat(true) },
+              { label: 'Location', lv: locLabel, onPress: () => setShowLoc(true) },
+              { label: 'Supplier', lv: supLabel, onPress: () => setShowSup(true) },
+            ].map(p => (
+              <View key={p.label}>
+                <Text style={editStyles.label}>{p.label}</Text>
+                <TouchableOpacity style={editStyles.pickerBtn} onPress={p.onPress}>
+                  <Text style={editStyles.pickerBtnText}>{p.lv}</Text>
+                  <Text style={editStyles.pickerChevron}>›</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+
+          <View style={editStyles.btnRow}>
+            <TouchableOpacity style={editStyles.btnCancel} onPress={onClose}>
+              <Text style={editStyles.btnCancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={editStyles.btnSave} onPress={handleSave} disabled={saving}>
+              {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={editStyles.btnSaveText}>Save</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+
+      <PickerModal
+        visible={showCat} title="Category"
+        items={categories} labelKey="name"
+        onSelect={c => setCategoryId(c?.id ?? null)} onClose={() => setShowCat(false)}
+      />
+      <PickerModal
+        visible={showLoc} title="Location"
+        items={locations.map(l => ({ ...l, name: [l.zone, l.aisle, l.bin].filter(Boolean).join(' › ') }))}
+        labelKey="name"
+        onSelect={l => setLocationId(l?.id ?? null)} onClose={() => setShowLoc(false)}
+      />
+      <PickerModal
+        visible={showSup} title="Supplier"
+        items={suppliers} labelKey="name"
+        onSelect={s => setSupplierId(s?.id ?? null)} onClose={() => setShowSup(false)}
+      />
+    </Modal>
+  );
+}
 
 export function ItemDetailScreen() {
   const route = useRoute<Route>();
@@ -41,6 +212,7 @@ export function ItemDetailScreen() {
   const [txQty, setTxQty] = useState('');
   const [txNotes, setTxNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -65,9 +237,39 @@ export function ItemDetailScreen() {
 
   useEffect(() => {
     if (item) {
-      navigation.setOptions({ title: item.name });
+      navigation.setOptions({
+        title: item.name,
+        headerRight: () => (
+          <View style={{ flexDirection: 'row', gap: 12, marginRight: 4 }}>
+            <TouchableOpacity onPress={() => setShowEdit(true)}>
+              <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>Edit</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleDelete}>
+              <Text style={{ color: '#ff8a80', fontSize: 14, fontWeight: '600' }}>Delete</Text>
+            </TouchableOpacity>
+          </View>
+        ),
+      });
     }
   }, [item]);
+
+  const handleDelete = () => {
+    if (!item) return;
+    Alert.alert('Delete Item', `Remove "${item.name}" permanently?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive',
+        onPress: async () => {
+          try {
+            await itemsApi.remove(item.id);
+            navigation.goBack();
+          } catch (e: any) {
+            Alert.alert('Error', e.message ?? 'Failed to delete.');
+          }
+        },
+      },
+    ]);
+  };
 
   const handleSubmitTransaction = async () => {
     const qty = parseInt(txQty, 10);
@@ -117,6 +319,7 @@ export function ItemDetailScreen() {
   const isLow = item.quantity < item.min_threshold;
 
   return (
+    <>
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.container}>
         {/* Item Card */}
@@ -241,6 +444,16 @@ export function ItemDetailScreen() {
         </View>
       </ScrollView>
     </SafeAreaView>
+
+    {item && showEdit && (
+      <EditItemModal
+        visible={showEdit}
+        item={item}
+        onSaved={loadData}
+        onClose={() => setShowEdit(false)}
+      />
+    )}
+    </>
   );
 }
 
@@ -307,4 +520,45 @@ const styles = StyleSheet.create({
   txQty: { fontSize: 14, fontWeight: '600', color: COLORS.text },
   txNotes: { fontSize: 12, color: COLORS.subtext, marginTop: 2 },
   txDate: { fontSize: 11, color: COLORS.subtext, marginTop: 2 },
+});
+
+const editStyles = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: '#ffffff', borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    padding: 20, paddingBottom: 36, maxHeight: '90%',
+  },
+  title: { fontSize: 17, fontWeight: '700', color: COLORS.primary, marginBottom: 16, textAlign: 'center' },
+  label: { fontSize: 13, fontWeight: '600', color: '#555', marginBottom: 5, marginTop: 10 },
+  input: {
+    borderWidth: 1, borderColor: COLORS.border, borderRadius: 8,
+    paddingHorizontal: 12, paddingVertical: 10, fontSize: 15,
+    backgroundColor: '#fafafa', color: '#222',
+  },
+  multiline: { minHeight: 64, textAlignVertical: 'top' },
+  pickerBtn: {
+    borderWidth: 1, borderColor: COLORS.border, borderRadius: 8,
+    paddingHorizontal: 12, paddingVertical: 12, flexDirection: 'row',
+    justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fafafa',
+  },
+  pickerBtnText: { fontSize: 15, color: '#222' },
+  pickerChevron: { fontSize: 18, color: '#999' },
+  btnRow: { flexDirection: 'row', gap: 12, marginTop: 20 },
+  btnCancel: {
+    flex: 1, borderWidth: 1, borderColor: COLORS.border, borderRadius: 10,
+    paddingVertical: 13, alignItems: 'center',
+  },
+  btnCancelText: { fontSize: 15, color: '#666', fontWeight: '600' },
+  btnSave: { flex: 1, backgroundColor: COLORS.primary, borderRadius: 10, paddingVertical: 13, alignItems: 'center' },
+  btnSaveText: { fontSize: 15, color: '#fff', fontWeight: '700' },
+  // PickerModal styles
+  pickerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.40)', justifyContent: 'flex-end' },
+  pickerSheet: {
+    backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    padding: 16, maxHeight: '60%',
+  },
+  pickerTitle: { fontSize: 16, fontWeight: '700', color: COLORS.primary, marginBottom: 12, textAlign: 'center' },
+  pickerItem: { paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  pickerItemText: { fontSize: 15, color: '#222' },
+  pickerItemNone: { fontSize: 15, color: '#999', fontStyle: 'italic' },
 });

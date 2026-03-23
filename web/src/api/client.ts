@@ -2,6 +2,8 @@ import axios from 'axios';
 import type {
   ApiResponse, InventoryItem, Category, Location, Transaction,
   ItemFormData, CategoryFormData, LocationFormData, TransactionFormData,
+  Supplier, SupplierFormData, PurchaseOrder, POFormData,
+  ItemLocation, StockTransfer, TransferFormData,
 } from '../types';
 
 export const STORAGE_KEYS = {
@@ -92,4 +94,36 @@ export const api = {
     const { apiUrl, apiKey } = getSettings();
     return `${apiUrl}/reports/stock?apikey=${encodeURIComponent(apiKey)}`;
   },
+  // ── Suppliers ──────────────────────────────────────────────────────────────
+  getSuppliers:    () => unwrap<Supplier[]>(client().get('/suppliers')),
+  getSupplier:     (id: string) => unwrap<Supplier>(client().get(`/suppliers/${id}`)),
+  createSupplier:  (data: SupplierFormData) => unwrap<Supplier>(client().post('/suppliers', data)),
+  updateSupplier:  (id: string, data: Partial<SupplierFormData>) => unwrap<Supplier>(client().put(`/suppliers/${id}`, data)),
+  deleteSupplier:  (id: string) => client().delete(`/suppliers/${id}`),
+
+  // ── Purchase Orders ────────────────────────────────────────────────────────
+  getPurchaseOrders:     () => unwrap<PurchaseOrder[]>(client().get('/purchase-orders')),
+  getPurchaseOrder:      (id: string) => unwrap<PurchaseOrder>(client().get(`/purchase-orders/${id}`)),
+  createPurchaseOrder:   (data: POFormData) => unwrap<PurchaseOrder>(client().post('/purchase-orders', data)),
+  autoGeneratePOs:       () => unwrap<PurchaseOrder[]>(client().post('/purchase-orders/auto-generate', {})),
+  updatePurchaseOrder:   (id: string, data: Partial<{ status: string; notes: string; supplier_id: string }>) =>
+    unwrap<PurchaseOrder>(client().put(`/purchase-orders/${id}`, data)),
+  deletePurchaseOrder:   (id: string) => client().delete(`/purchase-orders/${id}`),
+  sendPOEmail:           (id: string) => unwrap<{ message: string }>(client().post(`/purchase-orders/${id}/send-email`, {})),
+  getPOPdfUrl:           (id: string) => {
+    const { apiUrl, apiKey } = getSettings();
+    return `${apiUrl}/purchase-orders/${id}/pdf?apikey=${encodeURIComponent(apiKey)}`;
+  },
+
+  // ── App Settings (SMTP etc) ────────────────────────────────────────────────
+  getAppSettings:  () => unwrap<Record<string, string>>(client().get('/settings')),
+  saveAppSettings: (data: Record<string, string>) => unwrap<Record<string, string>>(client().post('/settings', data)),
+
+  // ── Item Locations ─────────────────────────────────────────────────────────
+  getItemLocations: (itemId: string) => unwrap<ItemLocation[]>(client().get(`/item-locations/${itemId}`)),
+
+  // ── Transfers ──────────────────────────────────────────────────────────────
+  getTransfers:     () => unwrap<StockTransfer[]>(client().get('/transfers')),
+  getItemTransfers: (itemId: string) => unwrap<StockTransfer[]>(client().get(`/transfers/item/${itemId}`)),
+  createTransfer:   (data: TransferFormData) => unwrap<StockTransfer>(client().post('/transfers', data)),
 };

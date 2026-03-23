@@ -7,6 +7,8 @@ import LocationsPage from './pages/LocationsPage'
 import ReportsPage from './pages/ReportsPage'
 import SettingsPage from './pages/SettingsPage'
 import AdjustmentsPage from './pages/AdjustmentsPage'
+import SuppliersPage from './pages/SuppliersPage'
+import PurchaseOrdersPage from './pages/PurchaseOrdersPage'
 
 export default function App() {
   return (
@@ -17,6 +19,8 @@ export default function App() {
           <Route path="items" element={<ItemsPage />} />
           <Route path="categories" element={<CategoriesPage />} />
           <Route path="locations" element={<LocationsPage />} />
+          <Route path="suppliers" element={<SuppliersPage />} />
+          <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="adjustments" element={<AdjustmentsPage />} />
           <Route path="settings" element={<SettingsPage />} />

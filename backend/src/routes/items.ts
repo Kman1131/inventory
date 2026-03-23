@@ -11,7 +11,7 @@ async function generateQRCodeData(itemId: string): Promise<string> {
   return QRCode.toDataURL(qrPayload);
 }
 
-// GET /items — list all items with joined category + location
+// GET /items — list all items with joined category + location + supplier
 router.get('/', (_req: Request, res: Response) => {
   try {
     const items = db.prepare(`
@@ -20,10 +20,12 @@ router.get('/', (_req: Request, res: Response) => {
         categories.name AS category_name,
         locations.zone AS location_zone,
         locations.aisle AS location_aisle,
-        locations.bin AS location_bin
+        locations.bin AS location_bin,
+        suppliers.name AS supplier_name
       FROM items
       LEFT JOIN categories ON items.category_id = categories.id
       LEFT JOIN locations ON items.location_id = locations.id
+      LEFT JOIN suppliers ON items.supplier_id = suppliers.id
       ORDER BY items.name ASC
     `).all() as InventoryItem[];
     res.json({ success: true, data: items });
@@ -41,10 +43,12 @@ router.get('/low-stock', (_req: Request, res: Response) => {
         categories.name AS category_name,
         locations.zone AS location_zone,
         locations.aisle AS location_aisle,
-        locations.bin AS location_bin
+        locations.bin AS location_bin,
+        suppliers.name AS supplier_name
       FROM items
       LEFT JOIN categories ON items.category_id = categories.id
       LEFT JOIN locations ON items.location_id = locations.id
+      LEFT JOIN suppliers ON items.supplier_id = suppliers.id
       WHERE items.quantity < items.min_threshold
       ORDER BY items.quantity ASC
     `).all() as InventoryItem[];
@@ -63,10 +67,12 @@ router.get('/:id', (req: Request, res: Response) => {
         categories.name AS category_name,
         locations.zone AS location_zone,
         locations.aisle AS location_aisle,
-        locations.bin AS location_bin
+        locations.bin AS location_bin,
+        suppliers.name AS supplier_name
       FROM items
       LEFT JOIN categories ON items.category_id = categories.id
       LEFT JOIN locations ON items.location_id = locations.id
+      LEFT JOIN suppliers ON items.supplier_id = suppliers.id
       WHERE items.id = ?
     `).get(req.params.id) as InventoryItem | undefined;
 
@@ -83,7 +89,7 @@ router.get('/:id', (req: Request, res: Response) => {
 // POST /items — create item
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { sku, name, description, quantity, min_threshold, price, category_id, location_id } = req.body;
+    const { sku, name, description, quantity, min_threshold, price, category_id, location_id, supplier_id } = req.body;
 
     if (!sku || !name) {
       res.status(400).json({ success: false, error: 'sku and name are required' });
@@ -95,8 +101,8 @@ router.post('/', async (req: Request, res: Response) => {
     const qr_code_data = await generateQRCodeData(id);
 
     db.prepare(`
-      INSERT INTO items (id, sku, name, description, quantity, min_threshold, price, category_id, location_id, qr_code_data, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO items (id, sku, name, description, quantity, min_threshold, price, category_id, location_id, supplier_id, qr_code_data, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id, sku, name,
       description ?? null,
@@ -105,6 +111,7 @@ router.post('/', async (req: Request, res: Response) => {
       price ?? 0,
       category_id ?? null,
       location_id ?? null,
+      supplier_id ?? null,
       qr_code_data,
       now, now
     );
@@ -130,7 +137,7 @@ router.put('/:id', async (req: Request, res: Response) => {
       return;
     }
 
-    const { sku, name, description, min_threshold, price, category_id, location_id } = req.body;
+    const { sku, name, description, min_threshold, price, category_id, location_id, supplier_id } = req.body;
     const now = new Date().toISOString();
 
     db.prepare(`
@@ -142,6 +149,7 @@ router.put('/:id', async (req: Request, res: Response) => {
         price = ?,
         category_id = ?,
         location_id = ?,
+        supplier_id = ?,
         updated_at = ?
       WHERE id = ?
     `).run(
@@ -152,6 +160,7 @@ router.put('/:id', async (req: Request, res: Response) => {
       price ?? existing.price,
       category_id !== undefined ? category_id : existing.category_id,
       location_id !== undefined ? location_id : existing.location_id,
+      supplier_id !== undefined ? supplier_id : (existing as any).supplier_id,
       now,
       req.params.id
     );

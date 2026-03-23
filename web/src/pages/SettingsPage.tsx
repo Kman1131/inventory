@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
+import { useQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { STORAGE_KEYS, getSettings, api } from '../api/client'
 
@@ -8,20 +9,70 @@ interface SettingsForm {
   apiKey: string
 }
 
+interface SmtpForm {
+  smtp_host: string
+  smtp_port: string
+  smtp_user: string
+  smtp_pass: string
+  smtp_from: string
+}
+
 export default function SettingsPage() {
   const [testing, setTesting]   = useState(false)
   const [connStatus, setConnStatus] = useState<'idle' | 'ok' | 'error'>('idle')
   const [connMsg, setConnMsg]   = useState('')
+  const [savingSmtp, setSavingSmtp] = useState(false)
 
   const { register, handleSubmit, getValues, formState: { isDirty } } = useForm<SettingsForm>({
     defaultValues: getSettings(),
   })
+
+  const { data: appSettings } = useQuery({
+    queryKey: ['app-settings'],
+    queryFn: api.getAppSettings,
+    retry: false,
+  })
+
+  const smtpForm = useForm<SmtpForm>({
+    defaultValues: { smtp_host: '', smtp_port: '587', smtp_user: '', smtp_pass: '', smtp_from: '' },
+  })
+
+  useEffect(() => {
+    if (appSettings) {
+      smtpForm.reset({
+        smtp_host: appSettings['smtp_host'] ?? '',
+        smtp_port: appSettings['smtp_port'] ?? '587',
+        smtp_user: appSettings['smtp_user'] ?? '',
+        smtp_pass: appSettings['smtp_pass'] ?? '',
+        smtp_from: appSettings['smtp_from'] ?? '',
+      })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appSettings])
 
   const onSave = (data: SettingsForm) => {
     localStorage.setItem(STORAGE_KEYS.API_URL, data.apiUrl.replace(/\/$/, ''))
     localStorage.setItem(STORAGE_KEYS.API_KEY, data.apiKey)
     toast.success('Settings saved')
     setConnStatus('idle')
+  }
+
+  const onSaveSmtp = async (data: SmtpForm) => {
+    setSavingSmtp(true)
+    try {
+      await api.saveAppSettings({
+        smtp_host: data.smtp_host,
+        smtp_port: data.smtp_port,
+        smtp_user: data.smtp_user,
+        smtp_pass: data.smtp_pass,
+        smtp_from: data.smtp_from,
+      })
+      toast.success('SMTP settings saved')
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setSavingSmtp(false)
+    }
   }
 
   const testConnection = async () => {
@@ -102,6 +153,69 @@ export default function SettingsPage() {
             disabled={!isDirty && connStatus === 'idle'}
           >
             Save Settings
+          </button>
+        </div>
+      </form>
+
+      {/* SMTP Email Settings */}
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900">Email (SMTP)</h2>
+        <p className="mt-1 text-sm text-gray-500">Used to send Purchase Order PDFs to suppliers</p>
+      </div>
+
+      <form onSubmit={smtpForm.handleSubmit(onSaveSmtp)} className="card p-6 space-y-5">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="label">SMTP Host</label>
+            <input
+              className="input"
+              placeholder="smtp.gmail.com"
+              {...smtpForm.register('smtp_host')}
+            />
+          </div>
+          <div>
+            <label className="label">Port</label>
+            <input
+              className="input"
+              placeholder="587"
+              {...smtpForm.register('smtp_port')}
+            />
+            <p className="mt-1 text-xs text-gray-400">587 (TLS) or 465 (SSL)</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="label">Username / Email</label>
+            <input
+              className="input"
+              placeholder="you@gmail.com"
+              {...smtpForm.register('smtp_user')}
+            />
+          </div>
+          <div>
+            <label className="label">Password / App Password</label>
+            <input
+              type="password"
+              className="input"
+              placeholder="Google App Password"
+              {...smtpForm.register('smtp_pass')}
+            />
+          </div>
+        </div>
+        <div>
+          <label className="label">From Address</label>
+          <input
+            className="input"
+            placeholder="Inventory System &lt;you@gmail.com&gt;"
+            {...smtpForm.register('smtp_from')}
+          />
+        </div>
+        <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
+          ℹ For Gmail, create an <strong>App Password</strong> at myaccount.google.com/apppasswords (requires 2FA).
+        </p>
+        <div className="flex justify-end pt-1">
+          <button type="submit" className="btn-primary" disabled={savingSmtp}>
+            {savingSmtp ? 'Saving…' : 'Save SMTP Settings'}
           </button>
         </div>
       </form>

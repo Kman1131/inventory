@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Alert,
+  View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
+import { apiGet } from '../config/api';
+import type { InventoryItem } from '../types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -16,15 +18,23 @@ const COLORS = {
   accent: '#42a5f5',
 };
 
+const ALL_BARCODE_TYPES = [
+  'qr', 'ean13', 'ean8', 'upc_a', 'upc_e',
+  'code39', 'code128', 'codabar', 'itf14',
+  'pdf417', 'aztec', 'datamatrix',
+] as const;
+
 export function ScannerScreen() {
   const navigation = useNavigation<Nav>();
   const isFocused = useIsFocused();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
+  const [looking, setLooking] = useState(false);
 
   useEffect(() => {
     if (isFocused) {
       setScanned(false);
+      setLooking(false);
     }
   }, [isFocused]);
 
@@ -37,7 +47,7 @@ export function ScannerScreen() {
       <SafeAreaView style={styles.permContainer}>
         <Text style={styles.permTitle}>Camera Access Required</Text>
         <Text style={styles.permText}>
-          This app needs camera access to scan QR codes on inventory items.
+          This app needs camera access to scan QR codes and barcodes on inventory items.
         </Text>
         <TouchableOpacity style={styles.btn} onPress={requestPermission}>
           <Text style={styles.btnText}>Grant Permission</Text>
@@ -46,27 +56,52 @@ export function ScannerScreen() {
     );
   }
 
-  const handleBarcodeScanned = ({ data }: { data: string }) => {
-    if (scanned) return;
+  const handleBarcodeScanned = async ({ data }: { data: string }) => {
+    if (scanned || looking) return;
     setScanned(true);
 
+    // Try to parse as JSON (QR code from our system)
     try {
       const parsed = JSON.parse(data) as { id?: string; action?: string };
       if (parsed.id) {
         navigation.navigate('ItemDetail', { itemId: parsed.id });
-      } else {
-        Alert.alert(
-          'Unknown QR Code',
-          `This QR code is not an inventory item.\nData: ${data}`,
-          [{ text: 'Scan Again', onPress: () => setScanned(false) }]
-        );
+        return;
       }
     } catch {
-      Alert.alert(
-        'Invalid QR Code',
-        'This does not appear to be an inventory QR code.',
-        [{ text: 'Scan Again', onPress: () => setScanned(false) }]
+      // Not JSON — treat as barcode / SKU
+    }
+
+    // Look up by SKU
+    setLooking(true);
+    try {
+      const items = await apiGet<InventoryItem[]>('/items');
+      const match = items.find(
+        i => i.sku.toLowerCase() === data.toLowerCase()
       );
+
+      if (match) {
+        navigation.navigate('ItemDetail', { itemId: match.id });
+      } else {
+        Alert.alert(
+          'No Item Found',
+          `No inventory item found for barcode:\n${data}`,
+          [
+            {
+              text: 'Create Item',
+              onPress: () => navigation.navigate('CreateItem', { sku: data }),
+            },
+            { text: 'Scan Again', onPress: () => { setScanned(false); setLooking(false); } },
+          ]
+        );
+      }
+    } catch (err) {
+      Alert.alert(
+        'Lookup Failed',
+        'Could not check the barcode against the server.',
+        [{ text: 'Scan Again', onPress: () => { setScanned(false); setLooking(false); } }]
+      );
+    } finally {
+      setLooking(false);
     }
   };
 
@@ -76,7 +111,7 @@ export function ScannerScreen() {
         <CameraView
           style={StyleSheet.absoluteFillObject}
           onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
-          barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+          barcodeScannerSettings={{ barcodeTypes: ALL_BARCODE_TYPES as any }}
         />
       )}
 
@@ -95,11 +130,18 @@ export function ScannerScreen() {
           <View style={styles.sideOverlay} />
         </View>
         <View style={styles.bottomOverlay}>
+          {looking ? (
+            <ActivityIndicator color="#ffffff" size="small" style={{ marginBottom: 8 }} />
+          ) : null}
           <Text style={styles.hint}>
-            {scanned ? 'Opening item...' : 'Point camera at an inventory QR code'}
+            {looking
+              ? 'Looking up item…'
+              : scanned
+              ? 'Opening item…'
+              : 'Scan a QR code or barcode'}
           </Text>
-          {scanned && (
-            <TouchableOpacity style={styles.btn} onPress={() => setScanned(false)}>
+          {scanned && !looking && (
+            <TouchableOpacity style={styles.btn} onPress={() => { setScanned(false); setLooking(false); }}>
               <Text style={styles.btnText}>Scan Again</Text>
             </TouchableOpacity>
           )}

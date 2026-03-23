@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { useQuery } from '@tanstack/react-query'
 import Modal from './Modal'
 import { api } from '../api/client'
-import type { InventoryItem, ItemFormData } from '../types'
+import type { InventoryItem, ItemFormData, Supplier } from '../types'
 
 interface ItemModalProps {
   open: boolean
@@ -20,12 +20,13 @@ export default function ItemModal({ open, onClose, onSubmit, item, loading }: It
     defaultValues: {
       sku: '', name: '', description: '',
       quantity: 0, min_threshold: 5, price: 0,
-      category_id: '', location_id: '',
+      category_id: '', location_id: '', supplier_id: '',
     },
   })
 
   const { data: categories = [] } = useQuery({ queryKey: ['categories'], queryFn: api.getCategories })
   const { data: locations = []  } = useQuery({ queryKey: ['locations'],  queryFn: api.getLocations  })
+  const { data: suppliers = []  } = useQuery<Supplier[]>({ queryKey: ['suppliers'], queryFn: api.getSuppliers })
 
   useEffect(() => {
     if (open) {
@@ -38,8 +39,9 @@ export default function ItemModal({ open, onClose, onSubmit, item, loading }: It
             price: item.price,
             category_id: item.category_id ?? '',
             location_id: item.location_id ?? '',
+            supplier_id: (item as any).supplier_id ?? '',
           }
-        : { sku: '', name: '', description: '', quantity: 0, min_threshold: 5, price: 0, category_id: '', location_id: '' }
+        : { sku: '', name: '', description: '', quantity: 0, min_threshold: 5, price: 0, category_id: '', location_id: '', supplier_id: '' }
       )
     }
   }, [open, item, reset])
@@ -138,6 +140,17 @@ export default function ItemModal({ open, onClose, onSubmit, item, loading }: It
               ))}
             </select>
           </div>
+        </div>
+
+        <div>
+          {/* Supplier */}
+          <label className="label">Supplier</label>
+          <select className="input" {...register('supplier_id')}>
+            <option value="">— None —</option>
+            {suppliers.map(s => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
         </div>
 
         {isEdit && (

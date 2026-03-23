@@ -60,3 +60,78 @@ export interface ApiResponse<T> {
   data?: T;
   error?: string;
 }
+
+export interface Supplier {
+  id: string;
+  name: string;
+  contact_name: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type PurchaseOrderStatus = 'draft' | 'sent' | 'received' | 'cancelled';
+
+export interface PurchaseOrderItem {
+  id: string;
+  purchase_order_id: string;
+  item_id: string | null;
+  sku: string;
+  name: string;
+  quantity_ordered: number;
+  unit_price: number;
+  created_at: string;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  po_number: string;
+  supplier_id: string | null;
+  status: PurchaseOrderStatus;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  // Joined fields
+  supplier_name?: string;
+  supplier_email?: string;
+  items?: PurchaseOrderItem[];
+}
+
+export interface AppSetting {
+  key: string;
+  value: string;
+}
+
+export interface ItemLocation {
+  id: string;
+  item_id: string;
+  location_id: string;
+  quantity: number;
+  updated_at: string;
+  // Joined from locations
+  zone?: string;
+  aisle?: string | null;
+  bin?: string | null;
+}
+
+export interface StockTransfer {
+  id: string;
+  item_id: string;
+  from_location_id: string | null;
+  to_location_id: string | null;
+  quantity: number;
+  notes: string | null;
+  created_at: string;
+  // Joined fields
+  item_name?: string;
+  item_sku?: string;
+  from_zone?: string | null;
+  from_aisle?: string | null;
+  from_bin?: string | null;
+  to_zone?: string | null;
+  to_aisle?: string | null;
+  to_bin?: string | null;
+}

@@ -7,7 +7,12 @@ const router = Router();
 
 router.get('/', (_req: Request, res: Response) => {
   try {
-    const locations = db.prepare('SELECT * FROM locations ORDER BY zone ASC').all() as Location[];
+    const locations = db.prepare(`
+      SELECT l.*, p.zone AS parent_zone, p.aisle AS parent_aisle, p.bin AS parent_bin
+      FROM locations l
+      LEFT JOIN locations p ON l.parent_id = p.id
+      ORDER BY l.zone ASC
+    `).all();
     res.json({ success: true, data: locations });
   } catch (err) {
     res.status(500).json({ success: false, error: (err as Error).message });
@@ -16,15 +21,15 @@ router.get('/', (_req: Request, res: Response) => {
 
 router.post('/', (req: Request, res: Response) => {
   try {
-    const { zone, aisle, bin } = req.body;
+    const { zone, aisle, bin, parent_id } = req.body;
     if (!zone) {
       res.status(400).json({ success: false, error: 'zone is required' });
       return;
     }
     const id = uuidv4();
     const now = new Date().toISOString();
-    db.prepare('INSERT INTO locations (id, zone, aisle, bin, created_at) VALUES (?, ?, ?, ?, ?)').run(
-      id, zone, aisle ?? null, bin ?? null, now
+    db.prepare('INSERT INTO locations (id, zone, aisle, bin, parent_id, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(
+      id, zone, aisle ?? null, bin ?? null, parent_id ?? null, now
     );
     const location = db.prepare('SELECT * FROM locations WHERE id = ?').get(id) as Location;
     res.status(201).json({ success: true, data: location });
@@ -40,11 +45,12 @@ router.put('/:id', (req: Request, res: Response) => {
       res.status(404).json({ success: false, error: 'Location not found' });
       return;
     }
-    const { zone, aisle, bin } = req.body;
-    db.prepare('UPDATE locations SET zone = ?, aisle = ?, bin = ? WHERE id = ?').run(
+    const { zone, aisle, bin, parent_id } = req.body;
+    db.prepare('UPDATE locations SET zone = ?, aisle = ?, bin = ?, parent_id = ? WHERE id = ?').run(
       zone ?? existing.zone,
       aisle !== undefined ? aisle : existing.aisle,
       bin !== undefined ? bin : existing.bin,
+      parent_id !== undefined ? (parent_id || null) : (existing as any).parent_id,
       req.params.id
     );
     const updated = db.prepare('SELECT * FROM locations WHERE id = ?').get(req.params.id) as Location;

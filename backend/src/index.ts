@@ -6,6 +6,11 @@ import categoriesRouter from './routes/categories';
 import locationsRouter from './routes/locations';
 import transactionsRouter from './routes/transactions';
 import reportsRouter from './routes/reports';
+import suppliersRouter from './routes/suppliers';
+import purchaseOrdersRouter from './routes/purchaseOrders';
+import appSettingsRouter from './routes/settings';
+import itemLocationsRouter from './routes/itemLocations';
+import transfersRouter from './routes/transfers';
 
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
@@ -27,6 +32,11 @@ app.use('/categories', categoriesRouter);
 app.use('/locations', locationsRouter);
 app.use('/transactions', transactionsRouter);
 app.use('/reports', reportsRouter);
+app.use('/suppliers', suppliersRouter);
+app.use('/purchase-orders', purchaseOrdersRouter);
+app.use('/settings', appSettingsRouter);
+app.use('/item-locations', itemLocationsRouter);
+app.use('/transfers', transfersRouter);
 
 // 404 handler
 app.use((_req, res) => {

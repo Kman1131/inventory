@@ -44,7 +44,7 @@ export function ReportScreen() {
       // API key is passed as query param since downloadAsync doesn't support headers.
       const baseUrl = await getApiBaseUrl();
       const downloadUrl = `${baseUrl}/reports/stock?apikey=${encodeURIComponent(apiKey)}`;
-      const fileUri = `${FileSystem.cacheDirectory}stock-report-${Date.now()}.pdf`;
+      const fileUri = `${FileSystem.cacheDirectory ?? ''}stock-report-${Date.now()}.pdf`;
 
       const result = await FileSystem.downloadAsync(downloadUrl, fileUri);
 

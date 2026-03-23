@@ -69,3 +69,63 @@ export async function apiDelete(path: string): Promise<void> {
   const client = await getApiClient();
   await client.delete(path);
 }
+
+// ── Items ────────────────────────────────────────────────────────────────────
+import type {
+  InventoryItem, Category, Location, Supplier, Transaction, PurchaseOrder, PurchaseOrderItem,
+} from '../types';
+
+export const itemsApi = {
+  list:   () => apiGet<InventoryItem[]>('/items'),
+  get:    (id: string) => apiGet<InventoryItem>(`/items/${id}`),
+  create: (data: Partial<InventoryItem>) => apiPost<InventoryItem>('/items', data),
+  update: (id: string, data: Partial<InventoryItem>) => apiPut<InventoryItem>(`/items/${id}`, data),
+  remove: (id: string) => apiDelete(`/items/${id}`),
+};
+
+// ── Categories ───────────────────────────────────────────────────────────────
+export const categoriesApi = {
+  list:   () => apiGet<Category[]>('/categories'),
+  create: (data: { name: string; parent_id?: string | null }) => apiPost<Category>('/categories', data),
+  update: (id: string, data: { name: string; parent_id?: string | null }) => apiPut<Category>(`/categories/${id}`, data),
+  remove: (id: string) => apiDelete(`/categories/${id}`),
+};
+
+// ── Locations ────────────────────────────────────────────────────────────────
+export const locationsApi = {
+  list:   () => apiGet<Location[]>('/locations'),
+  create: (data: { zone: string; aisle?: string | null; bin?: string | null; parent_id?: string | null }) =>
+    apiPost<Location>('/locations', data),
+  update: (id: string, data: { zone: string; aisle?: string | null; bin?: string | null; parent_id?: string | null }) =>
+    apiPut<Location>(`/locations/${id}`, data),
+  remove: (id: string) => apiDelete(`/locations/${id}`),
+};
+
+// ── Suppliers ────────────────────────────────────────────────────────────────
+export const suppliersApi = {
+  list:   () => apiGet<Supplier[]>('/suppliers'),
+  get:    (id: string) => apiGet<Supplier>(`/suppliers/${id}`),
+  create: (data: Partial<Supplier>) => apiPost<Supplier>('/suppliers', data),
+  update: (id: string, data: Partial<Supplier>) => apiPut<Supplier>(`/suppliers/${id}`, data),
+  remove: (id: string) => apiDelete(`/suppliers/${id}`),
+};
+
+// ── Transactions ─────────────────────────────────────────────────────────────
+export const transactionsApi = {
+  list: (itemId: string) => apiGet<Transaction[]>(`/transactions/${itemId}`),
+  create: (data: { item_id: string; type: string; quantity_delta: number; notes?: string; device_id?: string }) =>
+    apiPost<Transaction>('/transactions', data),
+};
+
+// ── Purchase Orders ──────────────────────────────────────────────────────────
+export const purchaseOrdersApi = {
+  list:   () => apiGet<PurchaseOrder[]>('/purchase-orders'),
+  get:    (id: string) => apiGet<PurchaseOrder>(`/purchase-orders/${id}`),
+  create: (data: { supplier_id?: string | null; notes?: string; items: { sku: string; name: string; quantity_ordered: number; unit_price: number; item_id?: string }[] }) =>
+    apiPost<PurchaseOrder>('/purchase-orders', data),
+  update: (id: string, data: { status?: string; notes?: string; supplier_id?: string | null }) =>
+    apiPut<PurchaseOrder>(`/purchase-orders/${id}`, data),
+  remove: (id: string) => apiDelete(`/purchase-orders/${id}`),
+  autoGenerate: () => apiPost<PurchaseOrder[]>('/purchase-orders/auto-generate', {}),
+  sendEmail: (id: string) => apiPost<{ message: string }>(`/purchase-orders/${id}/send-email`, {}),
+};
