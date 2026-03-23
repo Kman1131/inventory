@@ -4,7 +4,7 @@ import {
   ActivityIndicator, Alert, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DEFAULT_PORT, STORAGE_KEYS, getApiBaseUrl } from '../config/api';
@@ -44,7 +44,7 @@ export function ReportScreen() {
       // API key is passed as query param since downloadAsync doesn't support headers.
       const baseUrl = await getApiBaseUrl();
       const downloadUrl = `${baseUrl}/reports/stock?apikey=${encodeURIComponent(apiKey)}`;
-      const fileUri = `${FileSystem.cacheDirectory ?? ''}stock-report-${Date.now()}.pdf`;
+      const fileUri = `${FileSystem.cacheDirectory}stock-report-${Date.now()}.pdf`;
 
       const result = await FileSystem.downloadAsync(downloadUrl, fileUri);
 
