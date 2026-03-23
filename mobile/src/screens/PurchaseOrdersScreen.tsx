@@ -243,6 +243,28 @@ export function PurchaseOrdersScreen() {
     })));
   };
 
+  const handleReceive = (po: PurchaseOrder) => {
+    Alert.alert(
+      'Receive PO',
+      `Receive all items on ${po.po_number}?\n\nThis will create IN transactions for each line item and mark the PO as received.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Receive', style: 'default',
+          onPress: async () => {
+            try {
+              const res = await purchaseOrdersApi.receive(po.id);
+              await load();
+              Alert.alert('Received', `${res.transactions_created} item line${res.transactions_created !== 1 ? 's' : ''} received from ${po.po_number}.`);
+            } catch (e: any) {
+              Alert.alert('Error', e.message ?? 'Failed to receive PO.');
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const handleDelete = (po: PurchaseOrder) => {    Alert.alert('Delete PO', `Remove ${po.po_number}?`, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -320,6 +342,11 @@ export function PurchaseOrdersScreen() {
                 <TouchableOpacity style={styles.actionBtn} onPress={() => handleUpdateStatus(po)}>
                   <Text style={styles.actionTxt}>Status</Text>
                 </TouchableOpacity>
+                {(po.status === 'draft' || po.status === 'sent') && (
+                  <TouchableOpacity style={[styles.actionBtn, styles.actionSuccess]} onPress={() => handleReceive(po)}>
+                    <Text style={[styles.actionTxt, { color: COLORS.success }]}>📥 Receive</Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity style={[styles.actionBtn, styles.actionDanger]} onPress={() => handleDelete(po)}>
                   <Text style={[styles.actionTxt, { color: COLORS.danger }]}>Delete</Text>
                 </TouchableOpacity>
@@ -373,6 +400,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.border,
   },
   actionDanger: { borderColor: '#ffcdd2' },
+  actionSuccess: { borderColor: '#c8e6c9' },
   actionTxt: { fontSize: 12, fontWeight: '600', color: COLORS.accent },
 });
 
