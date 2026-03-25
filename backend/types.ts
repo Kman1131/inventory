@@ -32,6 +32,7 @@ export interface InventoryItem {
   location_zone?: string;
   location_aisle?: string;
   location_bin?: string;
+  locations_label?: string;
 }
 
 export type TransactionType = 'IN' | 'OUT' | 'ADJUSTMENT';
@@ -43,6 +44,7 @@ export interface Transaction {
   quantity_delta: number;
   notes: string | null;
   device_id: string | null;
+  location_id: string | null;
   created_at: string;
 }
 

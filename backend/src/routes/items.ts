@@ -11,6 +11,11 @@ async function generateQRCodeData(itemId: string): Promise<string> {
   return QRCode.toDataURL(qrPayload);
 }
 
+async function generateLocationQRCodeData(itemId: string, sku: string, locationId: string): Promise<string> {
+  const qrPayload = JSON.stringify({ id: itemId, sku, action: 'transaction', location_id: locationId });
+  return QRCode.toDataURL(qrPayload);
+}
+
 // GET /items — list all items with joined category + location + supplier
 // Supports: ?unassigned=1 to only return items without a location
 router.get('/', (req: Request, res: Response) => {
@@ -23,7 +28,16 @@ router.get('/', (req: Request, res: Response) => {
         locations.zone AS location_zone,
         locations.aisle AS location_aisle,
         locations.bin AS location_bin,
-        suppliers.name AS supplier_name
+        suppliers.name AS supplier_name,
+        (
+          SELECT GROUP_CONCAT(
+            CASE WHEN l.aisle IS NOT NULL AND l.bin IS NOT NULL THEN l.zone || '/' || l.aisle || '/' || l.bin
+                 WHEN l.aisle IS NOT NULL THEN l.zone || '/' || l.aisle
+                 ELSE l.zone END, ', ')
+          FROM item_locations il
+          JOIN locations l ON il.location_id = l.id
+          WHERE il.item_id = items.id AND il.quantity > 0
+        ) AS locations_label
       FROM items
       LEFT JOIN categories ON items.category_id = categories.id
       LEFT JOIN locations ON items.location_id = locations.id
@@ -47,7 +61,16 @@ router.get('/low-stock', (_req: Request, res: Response) => {
         locations.zone AS location_zone,
         locations.aisle AS location_aisle,
         locations.bin AS location_bin,
-        suppliers.name AS supplier_name
+        suppliers.name AS supplier_name,
+        (
+          SELECT GROUP_CONCAT(
+            CASE WHEN l.aisle IS NOT NULL AND l.bin IS NOT NULL THEN l.zone || '/' || l.aisle || '/' || l.bin
+                 WHEN l.aisle IS NOT NULL THEN l.zone || '/' || l.aisle
+                 ELSE l.zone END, ', ')
+          FROM item_locations il
+          JOIN locations l ON il.location_id = l.id
+          WHERE il.item_id = items.id AND il.quantity > 0
+        ) AS locations_label
       FROM items
       LEFT JOIN categories ON items.category_id = categories.id
       LEFT JOIN locations ON items.location_id = locations.id
@@ -56,6 +79,38 @@ router.get('/low-stock', (_req: Request, res: Response) => {
       ORDER BY items.quantity ASC
     `).all() as InventoryItem[];
     res.json({ success: true, data: items });
+  } catch (err) {
+    res.status(500).json({ success: false, error: (err as Error).message });
+  }
+});
+
+// GET /items/:id/location-qrs — per-location QR codes for an item
+router.get('/:id/location-qrs', async (req: Request, res: Response) => {
+  try {
+    const item = db.prepare('SELECT id, sku FROM items WHERE id = ?').get(req.params.id) as { id: string; sku: string } | undefined;
+    if (!item) {
+      res.status(404).json({ success: false, error: 'Item not found' });
+      return;
+    }
+    const locations = db.prepare(`
+      SELECT il.location_id, il.quantity, l.zone, l.aisle, l.bin
+      FROM item_locations il
+      JOIN locations l ON il.location_id = l.id
+      WHERE il.item_id = ?
+      ORDER BY l.zone, l.aisle, l.bin
+    `).all(req.params.id) as { location_id: string; quantity: number; zone: string; aisle: string | null; bin: string | null }[];
+
+    const results = await Promise.all(
+      locations.map(async (loc) => ({
+        location_id: loc.location_id,
+        zone: loc.zone,
+        aisle: loc.aisle,
+        bin: loc.bin,
+        quantity: loc.quantity,
+        qr_data: await generateLocationQRCodeData(item.id, item.sku, loc.location_id),
+      }))
+    );
+    res.json({ success: true, data: results });
   } catch (err) {
     res.status(500).json({ success: false, error: (err as Error).message });
   }

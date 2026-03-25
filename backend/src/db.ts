@@ -124,6 +124,12 @@ if (!itemCols.find(c => c.name === 'order_qty')) {
   db.exec('ALTER TABLE items ADD COLUMN order_qty INTEGER');
 }
 
+// Migration: add location_id to transactions if upgrading from older schema
+const txCols = db.prepare('PRAGMA table_info(transactions)').all() as { name: string }[];
+if (!txCols.find(c => c.name === 'location_id')) {
+  db.exec('ALTER TABLE transactions ADD COLUMN location_id TEXT REFERENCES locations(id) ON DELETE SET NULL');
+}
+
 // Migration: add parent_id to locations if upgrading from older schema
 const locCols = db.prepare('PRAGMA table_info(locations)').all() as { name: string }[];
 if (!locCols.find(c => c.name === 'parent_id')) {
