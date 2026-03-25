@@ -113,7 +113,7 @@ export const suppliersApi = {
 // ── Transactions ───────────────────────────────────────────────────────────────
 export const transactionsApi = {
   list: (itemId: string) => apiGet<Transaction[]>(`/transactions/${itemId}`),
-  create: (data: { item_id: string; type: string; quantity_delta: number; notes?: string; device_id?: string; location_id?: string | null }) =>
+  create: (data: { item_id: string; type: string; quantity_delta: number; notes?: string; device_id?: string; location_id?: string | null; job_number?: string | null }) =>
     apiPost<Transaction>('/transactions', data),
 };
 
@@ -134,4 +134,20 @@ export const purchaseOrdersApi = {
 export const itemLocationsApi = {
   list: (itemId: string) => apiGet<ItemLocation[]>(`/item-locations/${itemId}`),
   getLocationQRs: (itemId: string) => apiGet<{ location_id: string; zone: string; aisle: string | null; bin: string | null; quantity: number; qr_data: string }[]>(`/items/${itemId}/location-qrs`),
+};
+// ── Transfers ───────────────────────────────────────────────────────────
+export interface StockTransfer {
+  id: string;
+  item_id: string;
+  from_location_id: string | null;
+  to_location_id: string | null;
+  quantity: number;
+  notes: string | null;
+  created_at: string;
+}
+
+export const transfersApi = {
+  createTransfer: (data: { item_id: string; from_location_id: string; to_location_id: string; quantity: number; notes?: string }) =>
+    apiPost<StockTransfer>('/transfers', data),
+  listItem: (itemId: string) => apiGet<StockTransfer[]>(`/transfers/item/${itemId}`),
 };

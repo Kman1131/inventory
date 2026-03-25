@@ -6,6 +6,7 @@ const NAV = [
   { to: '/',                label: 'Dashboard',       icon: '◼' },
   { to: '/items',           label: 'Inventory',       icon: '📦' },
   { to: '/adjustments',     label: 'Adjustments',     icon: '⇅'  },
+  { to: '/replenishment',   label: 'Replenishment',   icon: '🔄' },
   { to: '/categories',      label: 'Categories',      icon: '🏷️' },
   { to: '/locations',       label: 'Locations',       icon: '📍' },
   { to: '/suppliers',       label: 'Suppliers',       icon: '🏢' },

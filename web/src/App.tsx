@@ -9,6 +9,7 @@ import SettingsPage from './pages/SettingsPage'
 import AdjustmentsPage from './pages/AdjustmentsPage'
 import SuppliersPage from './pages/SuppliersPage'
 import PurchaseOrdersPage from './pages/PurchaseOrdersPage'
+import ReplenishmentPage from './pages/ReplenishmentPage'
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="adjustments" element={<AdjustmentsPage />} />
+          <Route path="replenishment" element={<ReplenishmentPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
