@@ -2,7 +2,8 @@ FROM node:20-bookworm-slim
 
 WORKDIR /app
 
-RUN apt-get update \
+RUN echo 'Acquire::Check-Date "false";' > /etc/apt/apt.conf.d/10noCheckDate \
+  && apt-get update \
   && apt-get install -y --no-install-recommends python3 make g++ \
   && rm -rf /var/lib/apt/lists/*
 
