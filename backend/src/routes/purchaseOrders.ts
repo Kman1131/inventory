@@ -314,7 +314,7 @@ router.post('/:id/send-email', async (req: Request, res: Response) => {
     const now = new Date().toISOString();
     db.prepare("UPDATE purchase_orders SET status = 'sent', updated_at = ? WHERE id = ?").run(now, req.params.id);
 
-    res.json({ success: true, message: `Purchase order ${po.po_number} sent to ${supplierEmail}` });
+    res.json({ success: true, data: { message: `Purchase order ${po.po_number} sent to ${supplierEmail}` } });
   } catch (err) {
     res.status(500).json({ success: false, error: (err as Error).message });
   }

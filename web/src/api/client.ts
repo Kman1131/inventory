@@ -34,10 +34,10 @@ function client() {
 
 async function unwrap<T>(promise: Promise<{ data: ApiResponse<T> }>): Promise<T> {
   const res = await promise;
-  if (!res.data.success || res.data.data === undefined) {
+  if (!res.data.success) {
     throw new Error(res.data.error ?? 'Unknown API error');
   }
-  return res.data.data;
+  return res.data.data as T;
 }
 
 export const api = {
