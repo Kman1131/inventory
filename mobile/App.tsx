@@ -22,7 +22,7 @@ import { CreateSupplierScreen } from './src/screens/CreateSupplierScreen';
 
 export type RootStackParamList = {
   Tabs: undefined;
-  ItemDetail: { itemId: string };
+  ItemDetail: { itemId: string; locationId?: string };
   CreateItem: { sku?: string };
   CreateSupplier: undefined;
   Locations: undefined;

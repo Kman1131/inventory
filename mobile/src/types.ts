@@ -50,6 +50,7 @@ export interface Transaction {
   quantity_delta: number;
   notes: string | null;
   device_id: string | null;
+  location_id: string | null;
   created_at: string;
 }
 

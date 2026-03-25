@@ -86,6 +86,7 @@ export const api = {
       type: data.type,
       quantity_delta: data.quantity_delta,
       notes: data.notes || null,
+      location_id: data.location_id || null,
       device_id: 'web',
     })),
 
@@ -133,6 +134,7 @@ export const api = {
 
   // ── Item Locations ─────────────────────────────────────────────────────────
   getItemLocations: (itemId: string) => unwrap<ItemLocation[]>(client().get(`/item-locations/${itemId}`)),
+  getItemLocationQRs: (itemId: string) => unwrap<{ location_id: string; zone: string; aisle: string | null; bin: string | null; quantity: number; qr_data: string }[]>(client().get(`/items/${itemId}/location-qrs`)),
 
   // ── Transfers ──────────────────────────────────────────────────────────────
   getTransfers:     () => unwrap<StockTransfer[]>(client().get('/transfers')),

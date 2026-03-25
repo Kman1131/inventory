@@ -159,7 +159,7 @@ export default function ItemsPage() {
                 <th className="table-th">SKU</th>
                 <th className="table-th">Name</th>
                 <th className="table-th">Category</th>
-                <th className="table-th">Location</th>
+                <th className="table-th">Locations</th>
                 <th className="table-th text-right">Qty</th>
                 <th className="table-th text-right">Min</th>
                 <th className="table-th text-right">Price</th>
@@ -176,9 +176,9 @@ export default function ItemsPage() {
                 </tr>
               ) : filtered.map(item => {
                 const isLow = item.quantity < item.min_threshold
-                const locLabel = item.location_zone
+                const locLabel = item.locations_label || (item.location_zone
                   ? [item.location_zone, item.location_aisle, item.location_bin].filter(Boolean).join(' › ')
-                  : '—'
+                  : null)
                 return (
                   <tr key={item.id} className={`hover:bg-gray-50 transition-colors ${isLow ? 'bg-red-50/40' : ''}`}>
                     <td className="table-td w-8">
@@ -202,7 +202,7 @@ export default function ItemsPage() {
                     </td>
                     <td className="table-td text-gray-500">{item.category_name ?? '—'}</td>
                     <td className="table-td text-xs text-gray-500">
-                      {item.location_zone ? locLabel : <span className="text-amber-500">⚠ None</span>}
+                      {locLabel ? <span className="leading-snug">{locLabel}</span> : <span className="text-amber-500">⚠ None</span>}
                     </td>
                     <td className="table-td text-right">
                       <span className={`font-bold text-base ${isLow ? 'text-red-600' : 'text-gray-900'}`}>{item.quantity}</span>

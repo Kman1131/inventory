@@ -62,9 +62,12 @@ export function ScannerScreen() {
 
     // Try to parse as JSON (QR code from our system)
     try {
-      const parsed = JSON.parse(data) as { id?: string; action?: string };
+      const parsed = JSON.parse(data) as { id?: string; sku?: string; action?: string; location_id?: string };
       if (parsed.id) {
-        navigation.navigate('ItemDetail', { itemId: parsed.id });
+        navigation.navigate('ItemDetail', {
+          itemId: parsed.id,
+          ...(parsed.location_id ? { locationId: parsed.location_id } : {}),
+        });
         return;
       }
     } catch {

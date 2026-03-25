@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import Modal from './Modal'
-import type { InventoryItem, TransactionFormData } from '../types'
+import { api } from '../api/client'
+import type { InventoryItem, TransactionFormData, ItemLocation } from '../types'
 
 interface TransactionModalProps {
   open: boolean
@@ -12,16 +13,34 @@ interface TransactionModalProps {
 }
 
 export default function TransactionModal({ open, onClose, onSubmit, item, loading }: TransactionModalProps) {
-  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<TransactionFormData>({
-    defaultValues: { type: 'IN', quantity_delta: 1, notes: '' },
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<TransactionFormData>({
+    defaultValues: { type: 'IN', quantity_delta: 1, notes: '', location_id: null },
   })
   const txType = watch('type')
+  const locationId = watch('location_id')
+
+  const [itemLocations, setItemLocations] = useState<ItemLocation[]>([])
+  const [allLocations, setAllLocations] = useState<{ id: string; zone: string; aisle: string | null; bin: string | null }[]>([])
 
   useEffect(() => {
-    if (open) reset({ type: 'IN', quantity_delta: 1, notes: '' })
-  }, [open, reset])
+    if (open) {
+      reset({ type: 'IN', quantity_delta: 1, notes: '', location_id: null })
+      setItemLocations([])
+      if (item) {
+        api.getItemLocations(item.id).then(locs => setItemLocations(locs)).catch(() => {})
+        api.getLocations().then(locs => setAllLocations(locs)).catch(() => {})
+      }
+    }
+  }, [open, item, reset])
+
+  // reset location when type changes
+  useEffect(() => {
+    setValue('location_id', null)
+  }, [txType, setValue])
 
   if (!item) return null
+
+  const selectedLocQty = itemLocations.find(l => l.location_id === locationId)?.quantity ?? null
 
   const newQty = () => {
     const delta = Number(watch('quantity_delta')) || 0
@@ -29,6 +48,12 @@ export default function TransactionModal({ open, onClose, onSubmit, item, loadin
     if (txType === 'OUT') return item.quantity - Math.abs(delta)
     return item.quantity + delta
   }
+
+  const locLabel = (loc: { zone?: string; aisle?: string | null; bin?: string | null }) =>
+    [loc.zone, loc.aisle, loc.bin].filter(Boolean).join(' / ')
+
+  // For OUT: only show locations that have stock
+  const outLocations = itemLocations.filter(l => l.quantity > 0)
 
   return (
     <Modal open={open} onClose={onClose} title="Record Stock Transaction" maxWidth="max-w-md">
@@ -67,6 +92,50 @@ export default function TransactionModal({ open, onClose, onSubmit, item, loadin
           </div>
         </div>
 
+        {/* Location */}
+        <div>
+          <label className="label">
+            Location {(txType === 'IN' || txType === 'OUT') ? <span className="text-red-500">*</span> : <span className="text-gray-400 text-xs">(optional)</span>}
+          </label>
+          {txType === 'OUT' ? (
+            outLocations.length === 0 ? (
+              <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">No locations with stock found</p>
+            ) : (
+              <select
+                className="input"
+                {...register('location_id', { required: 'Location is required for OUT transactions' })}
+              >
+                <option value="">Select location…</option>
+                {outLocations.map(l => (
+                  <option key={l.location_id} value={l.location_id}>
+                    {locLabel(l)} — {l.quantity} in stock
+                  </option>
+                ))}
+              </select>
+            )
+          ) : (
+            <select
+              className="input"
+              {...register('location_id', { required: txType === 'IN' ? 'Location is required for IN transactions' : false })}
+            >
+              <option value="">
+                {txType === 'IN' ? 'Select destination location…' : 'No specific location (total only)'}
+              </option>
+              {allLocations.map(l => (
+                <option key={l.id} value={l.id}>
+                  {locLabel(l)}
+                </option>
+              ))}
+            </select>
+          )}
+          {errors.location_id && (
+            <p className="mt-1 text-xs text-red-600">{errors.location_id.message}</p>
+          )}
+          {selectedLocQty !== null && txType !== 'IN' && (
+            <p className="mt-1 text-xs text-gray-500">Stock at this location: <strong>{selectedLocQty}</strong></p>
+          )}
+        </div>
+
         {/* Delta */}
         <div>
           <label className="label">
@@ -80,8 +149,11 @@ export default function TransactionModal({ open, onClose, onSubmit, item, loadin
               valueAsNumber: true,
               required: 'Quantity is required',
               validate: v => {
-                if (txType === 'OUT' && Math.abs(v) > item.quantity)
-                  return `Cannot remove more than current stock (${item.quantity})`
+                if (txType === 'OUT') {
+                  const cap = selectedLocQty !== null ? selectedLocQty : item.quantity
+                  if (Math.abs(v) > cap)
+                    return `Cannot remove more than available stock (${cap})`
+                }
                 return true
               },
             })}
@@ -93,7 +165,7 @@ export default function TransactionModal({ open, onClose, onSubmit, item, loadin
 
         {/* Preview */}
         <div className="rounded-lg bg-primary-50 px-4 py-3 flex items-center justify-between">
-          <span className="text-sm text-primary-700 font-medium">New stock level</span>
+          <span className="text-sm text-primary-700 font-medium">New total stock level</span>
           <span className={`text-xl font-bold ${newQty() < item.min_threshold ? 'text-red-600' : 'text-green-700'}`}>
             {newQty()}
           </span>

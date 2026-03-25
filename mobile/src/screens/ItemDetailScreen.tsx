@@ -200,11 +200,12 @@ function EditItemModal({
 export function ItemDetailScreen() {
   const route = useRoute<Route>();
   const navigation = useNavigation<Nav>();
-  const { itemId } = route.params;
+  const { itemId, locationId: initialLocationId } = route.params;
 
   const [item, setItem] = useState<InventoryItem | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [itemLocations, setItemLocations] = useState<ItemLocation[]>([]);
+  const [allLocations, setAllLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -212,6 +213,8 @@ export function ItemDetailScreen() {
   const [txType, setTxType] = useState<TxType>('IN');
   const [txQty, setTxQty] = useState('');
   const [txNotes, setTxNotes] = useState('');
+  const [txLocationId, setTxLocationId] = useState<string | null>(initialLocationId ?? null);
+  const [showLocPicker, setShowLocPicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
 
@@ -219,14 +222,16 @@ export function ItemDetailScreen() {
     setLoading(true);
     setError(null);
     try {
-      const [itemData, txData, locsData] = await Promise.all([
+      const [itemData, txData, locsData, allLocsData] = await Promise.all([
         apiGet<InventoryItem>(`/items/${itemId}`),
         apiGet<Transaction[]>(`/transactions/${itemId}`),
         itemLocationsApi.list(itemId),
+        locationsApi.list(),
       ]);
       setItem(itemData);
       setTransactions(txData);
       setItemLocations(locsData);
+      setAllLocations(allLocsData);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -280,6 +285,17 @@ export function ItemDetailScreen() {
       Alert.alert('Invalid', 'Enter a non-zero quantity.');
       return;
     }
+    if ((txType === 'IN' || txType === 'OUT') && !txLocationId) {
+      Alert.alert('Location Required', 'Please select a location for IN/OUT transactions.');
+      return;
+    }
+    if (txType === 'OUT' && txLocationId) {
+      const locRow = itemLocations.find(l => l.location_id === txLocationId);
+      if (!locRow || locRow.quantity < Math.abs(qty)) {
+        Alert.alert('Insufficient Stock', `Only ${locRow?.quantity ?? 0} units available at this location.`);
+        return;
+      }
+    }
     setSubmitting(true);
     try {
       await apiPost('/transactions', {
@@ -287,6 +303,7 @@ export function ItemDetailScreen() {
         type: txType,
         quantity_delta: txType === 'ADJUSTMENT' ? qty : Math.abs(qty),
         notes: txNotes || undefined,
+        location_id: txLocationId || undefined,
         device_id: 'mobile-app',
       });
       setTxQty('');
@@ -394,7 +411,7 @@ export function ItemDetailScreen() {
               <TouchableOpacity
                 key={t}
                 style={[styles.typeBtn, txType === t && styles.typeBtnActive]}
-                onPress={() => setTxType(t)}
+                onPress={() => { setTxType(t); setTxLocationId(null); }}
               >
                 <Text style={[styles.typeBtnText, txType === t && styles.typeBtnTextActive]}>
                   {t}
@@ -402,6 +419,24 @@ export function ItemDetailScreen() {
               </TouchableOpacity>
             ))}
           </View>
+
+          {/* Location picker */}
+          <Text style={styles.inputLabel}>
+            Location {(txType === 'IN' || txType === 'OUT') ? '(required)' : '(optional)'}
+          </Text>
+          <TouchableOpacity style={styles.input} onPress={() => setShowLocPicker(true)}>
+            <Text style={{ color: txLocationId ? COLORS.text : '#aaa', fontSize: 15 }}>
+              {(() => {
+                if (!txLocationId) return txType === 'OUT' ? 'Select location (OUT)…' : 'Select location…';
+                if (txType === 'OUT') {
+                  const l = itemLocations.find(il => il.location_id === txLocationId);
+                  return l ? `${[l.zone, l.aisle, l.bin].filter(Boolean).join(' › ')} — ${l.quantity} in stock` : txLocationId;
+                }
+                const l = allLocations.find(al => al.id === txLocationId);
+                return l ? [l.zone, l.aisle, l.bin].filter(Boolean).join(' › ') : txLocationId;
+              })()}
+            </Text>
+          </TouchableOpacity>
 
           <Text style={styles.inputLabel}>
             {txType === 'ADJUSTMENT' ? 'Delta (+ or -)' : 'Quantity'}
@@ -471,6 +506,25 @@ export function ItemDetailScreen() {
         onClose={() => setShowEdit(false)}
       />
     )}
+
+    {/* Location picker for transaction form */}
+    <PickerModal
+      visible={showLocPicker}
+      title={txType === 'OUT' ? 'Select Location (has stock)' : 'Select Location'}
+      items={txType === 'OUT'
+        ? itemLocations.filter(l => l.quantity > 0).map(l => ({
+            id: l.location_id,
+            name: `${[l.zone, l.aisle, l.bin].filter(Boolean).join(' › ')} — ${l.quantity} units`,
+          }))
+        : allLocations.map(l => ({
+            id: l.id,
+            name: [l.zone, l.aisle, l.bin].filter(Boolean).join(' › '),
+          }))
+      }
+      labelKey="name"
+      onSelect={loc => setTxLocationId(loc?.id ?? null)}
+      onClose={() => setShowLocPicker(false)}
+    />
     </>
   );
 }

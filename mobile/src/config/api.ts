@@ -110,10 +110,10 @@ export const suppliersApi = {
   remove: (id: string) => apiDelete(`/suppliers/${id}`),
 };
 
-// ── Transactions ─────────────────────────────────────────────────────────────
+// ── Transactions ───────────────────────────────────────────────────────────────
 export const transactionsApi = {
   list: (itemId: string) => apiGet<Transaction[]>(`/transactions/${itemId}`),
-  create: (data: { item_id: string; type: string; quantity_delta: number; notes?: string; device_id?: string }) =>
+  create: (data: { item_id: string; type: string; quantity_delta: number; notes?: string; device_id?: string; location_id?: string | null }) =>
     apiPost<Transaction>('/transactions', data),
 };
 
@@ -132,4 +132,6 @@ export const purchaseOrdersApi = {
 
 // ── Item Locations ──────────────────────────────────────────────────────────────────
 export const itemLocationsApi = {
-  list: (itemId: string) => apiGet<ItemLocation[]>(`/item-locations/${itemId}`),};
+  list: (itemId: string) => apiGet<ItemLocation[]>(`/item-locations/${itemId}`),
+  getLocationQRs: (itemId: string) => apiGet<{ location_id: string; zone: string; aisle: string | null; bin: string | null; quantity: number; qr_data: string }[]>(`/items/${itemId}/location-qrs`),
+};
