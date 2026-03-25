@@ -8,6 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFetchInventory } from '../hooks/useFetchInventory';
 import { ItemCard } from '../components/ItemCard';
+import { FAB } from '../components/FAB';
 import type { InventoryItem } from '../types';
 import type { RootStackParamList } from '../../App';
 
@@ -103,8 +104,10 @@ export function DashboardScreen() {
             <Text style={styles.emptyHint}>Use the Scanner to add items or check backend connection.</Text>
           </View>
         }
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={{ paddingBottom: 90 }}
       />
+
+      <FAB onPress={() => navigation.navigate('CreateItem', {})} />
     </SafeAreaView>
   );
 }

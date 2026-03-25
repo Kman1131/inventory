@@ -25,16 +25,16 @@ export type RootStackParamList = {
   ItemDetail: { itemId: string };
   CreateItem: { sku?: string };
   CreateSupplier: undefined;
-};
-
-type TabParamList = {
-  Dashboard: undefined;
-  Scanner: undefined;
   Locations: undefined;
   Categories: undefined;
   Suppliers: undefined;
   Orders: undefined;
   Report: undefined;
+};
+
+type TabParamList = {
+  Dashboard: undefined;
+  Scanner: undefined;
   Settings: undefined;
 };
 
@@ -54,11 +54,6 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
   const icons: Record<string, string> = {
     Dashboard: '📦',
     Scanner: '📷',
-    Locations: '📍',
-    Categories: '🏷️',
-    Suppliers: '🏢',
-    Orders: '📋',
-    Report: '📄',
     Settings: '⚙️',
   };
   return (
@@ -96,34 +91,9 @@ function TabNavigator() {
         options={{ title: 'Scan Barcode / QR', tabBarLabel: 'Scan' }}
       />
       <Tab.Screen
-        name="Locations"
-        component={LocationsScreen}
-        options={{ title: 'Locations', tabBarLabel: 'Locations' }}
-      />
-      <Tab.Screen
-        name="Categories"
-        component={CategoriesScreen}
-        options={{ title: 'Categories', tabBarLabel: 'Categories' }}
-      />
-      <Tab.Screen
-        name="Suppliers"
-        component={SuppliersScreen}
-        options={{ title: 'Suppliers', tabBarLabel: 'Suppliers' }}
-      />
-      <Tab.Screen
-        name="Orders"
-        component={PurchaseOrdersScreen}
-        options={{ title: 'Purchase Orders', tabBarLabel: 'Orders' }}
-      />
-      <Tab.Screen
-        name="Report"
-        component={ReportScreen}
-        options={{ title: 'Stock Report', tabBarLabel: 'Report' }}
-      />
-      <Tab.Screen
         name="Settings"
         component={SettingsScreen}
-        options={{ title: 'Server Settings', tabBarLabel: 'Settings' }}
+        options={{ title: 'Settings', tabBarLabel: 'Settings' }}
       />
     </Tab.Navigator>
   );
@@ -162,6 +132,31 @@ export default function App() {
             name="CreateSupplier"
             component={CreateSupplierScreen}
             options={{ title: 'Add Supplier', ...headerOpts }}
+          />
+          <Stack.Screen
+            name="Locations"
+            component={LocationsScreen}
+            options={{ title: 'Locations', ...headerOpts }}
+          />
+          <Stack.Screen
+            name="Categories"
+            component={CategoriesScreen}
+            options={{ title: 'Categories', ...headerOpts }}
+          />
+          <Stack.Screen
+            name="Suppliers"
+            component={SuppliersScreen}
+            options={{ title: 'Suppliers', ...headerOpts }}
+          />
+          <Stack.Screen
+            name="Orders"
+            component={PurchaseOrdersScreen}
+            options={{ title: 'Purchase Orders', ...headerOpts }}
+          />
+          <Stack.Screen
+            name="Report"
+            component={ReportScreen}
+            options={{ title: 'Stock Report', ...headerOpts }}
           />
         </Stack.Navigator>
       </NavigationContainer>

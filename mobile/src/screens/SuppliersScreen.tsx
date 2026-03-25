@@ -68,8 +68,8 @@ function SupplierFormModal({
               { label: 'Contact Name', value: contactName, set: setContactName, placeholder: 'Jane Smith' },
               { label: 'Email', value: email, set: setEmail, placeholder: 'orders@supplier.com', keyboard: 'email-address' },
               { label: 'Phone', value: phone, set: setPhone, placeholder: '+1 555 0100', keyboard: 'phone-pad' },
-              { label: 'Address', value: address, set: setAddress, placeholder: '123 Warehouse Stâ€¦', multi: true },
-              { label: 'Notes', value: notes, set: setNotes, placeholder: 'Payment termsâ€¦', multi: true },
+              { label: 'Address', value: address, set: setAddress, placeholder: '123 Warehouse St', multi: true },
+              { label: 'Notes', value: notes, set: setNotes, placeholder: 'Payment terms', multi: true },
             ].map(f => (
               <View key={f.label}>
                 <Text style={modal.label}>{f.label}</Text>

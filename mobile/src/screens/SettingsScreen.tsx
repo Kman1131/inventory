@@ -4,8 +4,13 @@ import {
   Alert, ScrollView, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../App';
 import { useConfig } from '../hooks/useConfig';
 import { DEFAULT_PORT, getApiClient } from '../config/api';
+
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const COLORS = {
   primary: '#1a237e',
@@ -19,6 +24,7 @@ const COLORS = {
 };
 
 export function SettingsScreen() {
+  const navigation = useNavigation<Nav>();
   const { serverIp, serverPort, apiKey, isLoaded, setServerIp, setServerPort, setApiKey } = useConfig();
   const [ipInput, setIpInput] = useState('');
   const [portInput, setPortInput] = useState(DEFAULT_PORT);
@@ -148,6 +154,28 @@ export function SettingsScreen() {
           <Text style={styles.infoRow}>Port: {serverPort || DEFAULT_PORT}</Text>
           <Text style={styles.infoRow}>API Key: {apiKey ? 'configured' : '(not set)'}</Text>
         </View>
+
+        <Text style={styles.sectionHeading}>Manage</Text>
+        {(
+          [
+            { screen: 'Locations',  label: 'Locations',       icon: '📍' },
+            { screen: 'Categories', label: 'Categories',      icon: '🏷️' },
+            { screen: 'Suppliers',  label: 'Suppliers',       icon: '🏢' },
+            { screen: 'Orders',     label: 'Purchase Orders', icon: '📋' },
+            { screen: 'Report',     label: 'Stock Report',    icon: '📄' },
+          ] as const
+        ).map(({ screen, label, icon }) => (
+          <TouchableOpacity
+            key={screen}
+            style={styles.navRow}
+            onPress={() => navigation.navigate(screen as any)}
+            activeOpacity={0.75}
+          >
+            <Text style={styles.navIcon}>{icon}</Text>
+            <Text style={styles.navLabel}>{label}</Text>
+            <Text style={styles.navChevron}>›</Text>
+          </TouchableOpacity>
+        ))}
       </ScrollView>
     </SafeAreaView>
   );
@@ -187,4 +215,19 @@ const styles = StyleSheet.create({
   },
   infoTitle: { fontSize: 12, fontWeight: '700', color: COLORS.primary, marginBottom: 6 },
   infoRow: { fontSize: 12, color: COLORS.text, marginBottom: 2 },
+  sectionHeading: {
+    fontSize: 13, fontWeight: '700', color: COLORS.subtext,
+    textTransform: 'uppercase', letterSpacing: 0.8,
+    marginTop: 24, marginBottom: 8,
+  },
+  navRow: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: COLORS.card, borderRadius: 10,
+    paddingVertical: 14, paddingHorizontal: 16,
+    marginBottom: 8,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  navIcon: { fontSize: 20, marginRight: 14 },
+  navLabel: { flex: 1, fontSize: 15, color: COLORS.text, fontWeight: '500' },
+  navChevron: { fontSize: 22, color: COLORS.subtext },
 });

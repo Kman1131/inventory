@@ -138,7 +138,7 @@ export function CreateItemScreen({ route }: Props) {
         <View style={styles.card}>
           <Field label="SKU *" value={sku} onChangeText={v => setSku(v.toUpperCase())} placeholder="e.g. WDG-001" autoCapitalize="characters" />
           <Field label="Name *" value={name} onChangeText={setName} placeholder="Item name" />
-          <Field label="Description" value={description} onChangeText={setDescription} placeholder="Optionalâ€¦" multiline />
+          <Field label="Description" value={description} onChangeText={setDescription} placeholder="Optional" multiline />
 
           <View style={styles.row}>
             <View style={styles.halfField}>
@@ -161,9 +161,9 @@ export function CreateItemScreen({ route }: Props) {
             <Text style={styles.label}>Category</Text>
             <TouchableOpacity style={styles.picker} onPress={() => setShowCatPicker(true)}>
               <Text style={[styles.pickerText, !selectedCat && styles.pickerPlaceholder]}>
-                {selectedCat ? selectedCat.name : 'Select categoryâ€¦'}
+                {selectedCat ? selectedCat.name : 'Select category'}
               </Text>
-              <Text style={styles.pickerChevron}>â–¼</Text>
+              <Text style={styles.pickerChevron}>▼</Text>
             </TouchableOpacity>
           </View>
 
@@ -172,9 +172,9 @@ export function CreateItemScreen({ route }: Props) {
             <Text style={styles.label}>Location *</Text>
             <TouchableOpacity style={[styles.picker, !selectedLoc && styles.pickerError]} onPress={() => setShowLocPicker(true)}>
               <Text style={[styles.pickerText, !selectedLoc && styles.pickerPlaceholder]}>
-                {selectedLoc ? locLabel(selectedLoc) : 'Select locationâ€¦'}
+                {selectedLoc ? locLabel(selectedLoc) : 'Select location'}
               </Text>
-              <Text style={styles.pickerChevron}>â–¼</Text>
+              <Text style={styles.pickerChevron}>▼</Text>
             </TouchableOpacity>
           </View>
 
@@ -183,9 +183,9 @@ export function CreateItemScreen({ route }: Props) {
             <Text style={styles.label}>Supplier</Text>
             <TouchableOpacity style={styles.picker} onPress={() => setShowSupPicker(true)}>
               <Text style={[styles.pickerText, !selectedSup && styles.pickerPlaceholder]}>
-                {selectedSup ? selectedSup.name : 'Select supplierâ€¦'}
+                {selectedSup ? selectedSup.name : 'Select supplier'}
               </Text>
-              <Text style={styles.pickerChevron}>â–¼</Text>
+              <Text style={styles.pickerChevron}>▼</Text>
             </TouchableOpacity>
           </View>
         </View>
