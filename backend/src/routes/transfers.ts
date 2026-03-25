@@ -145,9 +145,12 @@ router.post('/', (req: Request, res: Response) => {
         ).run(uuidv4(), item_id, to_location_id, qty, now);
       }
 
-      // Update items.location_id to the destination (primary location = last transfer destination)
-      db.prepare('UPDATE items SET location_id = ?, updated_at = ? WHERE id = ?').run(
-        to_location_id, now, item_id
+      // Update total quantity on items (sum of all locations)
+      const totals = db.prepare(
+        'SELECT COALESCE(SUM(quantity),0) AS total FROM item_locations WHERE item_id = ?'
+      ).get(item_id) as { total: number };
+      db.prepare('UPDATE items SET quantity = ?, updated_at = ? WHERE id = ?').run(
+        totals.total, now, item_id
       );
 
       // Record the transfer log

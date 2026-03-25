@@ -52,6 +52,7 @@ export interface Transaction {
   notes: string | null;
   device_id: string | null;
   location_id: string | null;
+  job_number: string | null;
   created_at: string;
 }
 
@@ -140,6 +141,7 @@ export interface ItemLocation {
   item_id: string;
   location_id: string;
   quantity: number;
+  min_qty: number;
   updated_at: string;
   zone?: string;
   aisle?: string | null;
@@ -188,4 +190,5 @@ export type TransactionFormData = {
   quantity_delta: number;
   notes: string;
   location_id: string | null;
+  job_number: string | null;
 };

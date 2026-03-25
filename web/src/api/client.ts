@@ -87,6 +87,7 @@ export const api = {
       quantity_delta: data.quantity_delta,
       notes: data.notes || null,
       location_id: data.location_id || null,
+      job_number: data.job_number || null,
       device_id: 'web',
     })),
 
@@ -94,6 +95,11 @@ export const api = {
   getReportUrl: () => {
     const { apiUrl, apiKey } = getSettings();
     return `${apiUrl}/reports/stock?apikey=${encodeURIComponent(apiKey)}`;
+  },
+  getReplenishmentUrl: (locationId?: string) => {
+    const { apiUrl, apiKey } = getSettings();
+    const qs = locationId ? `location_id=${encodeURIComponent(locationId)}&` : '';
+    return `${apiUrl}/reports/replenishment?${qs}apikey=${encodeURIComponent(apiKey)}`;
   },
   // ── Suppliers ──────────────────────────────────────────────────────────────
   getSuppliers:    () => unwrap<Supplier[]>(client().get('/suppliers')),

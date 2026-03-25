@@ -293,7 +293,7 @@ export default function AdjustmentsPage() {
   })
 
   const { register, handleSubmit, watch, reset, formState: { errors } } = useForm<TransactionFormData>({
-    defaultValues: { type: 'IN', quantity_delta: 1, notes: '' },
+    defaultValues: { type: 'IN', quantity_delta: 1, notes: '', job_number: null },
   })
 
   const txType   = watch('type') as TransactionType
@@ -313,7 +313,7 @@ export default function AdjustmentsPage() {
       qc.invalidateQueries({ queryKey: ['items'] })
       qc.invalidateQueries({ queryKey: ['transactions', selectedId] })
       qc.invalidateQueries({ queryKey: ['low-stock'] })
-      reset({ type: txType, quantity_delta: 1, notes: '' })
+      reset({ type: txType, quantity_delta: 1, notes: '', job_number: null })
       toast.success('Transaction recorded')
     },
     onError: (e: Error) => toast.error(e.message),
@@ -483,6 +483,16 @@ export default function AdjustmentsPage() {
               />
             </div>
 
+            {/* Job Number */}
+            <div>
+              <label className="label">Job Number <span className="text-gray-400 font-normal">(optional)</span></label>
+              <input
+                className="input"
+                placeholder="e.g. JOB-2024-001"
+                {...register('job_number')}
+              />
+            </div>
+
             <button
               type="submit"
               className="btn-primary w-full justify-center py-3"
@@ -538,6 +548,7 @@ export default function AdjustmentsPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-gray-500">{formatDate(tx.created_at)}</p>
                       {tx.notes && <p className="text-sm text-gray-700 mt-0.5 truncate">{tx.notes}</p>}
+                      {tx.job_number && <p className="text-xs text-indigo-600 mt-0.5 font-medium">Job: {tx.job_number}</p>}
                       {tx.device_id && <p className="text-xs text-gray-400 mt-0.5">via {tx.device_id}</p>}
                     </div>
 

@@ -36,7 +36,7 @@ router.get('/:itemId', (req: Request, res: Response) => {
   try {
     const rows = db.prepare(`
       SELECT
-        il.id, il.item_id, il.location_id, il.quantity, il.updated_at,
+        il.id, il.item_id, il.location_id, il.quantity, il.min_qty, il.updated_at,
         l.zone, l.aisle, l.bin
       FROM item_locations il
       JOIN locations l ON il.location_id = l.id
@@ -50,10 +50,10 @@ router.get('/:itemId', (req: Request, res: Response) => {
 });
 
 // PUT /item-locations/:itemId — set (upsert) quantity at a specific location
-// Body: { location_id, quantity }
+// Body: { location_id, quantity, min_qty? }
 router.put('/:itemId', (req: Request, res: Response) => {
   try {
-    const { location_id, quantity } = req.body;
+    const { location_id, quantity, min_qty } = req.body;
     if (!location_id || quantity === undefined) {
       res.status(400).json({ success: false, error: 'location_id and quantity are required' });
       return;
@@ -70,6 +70,7 @@ router.put('/:itemId', (req: Request, res: Response) => {
     if (!loc) { res.status(404).json({ success: false, error: 'Location not found' }); return; }
 
     const now = new Date().toISOString();
+    const minQtyVal = min_qty !== undefined ? parseInt(min_qty) : 0;
 
     const run = db.transaction(() => {
       const existing = db.prepare(
@@ -78,12 +79,12 @@ router.put('/:itemId', (req: Request, res: Response) => {
 
       if (existing) {
         db.prepare(
-          'UPDATE item_locations SET quantity = ?, updated_at = ? WHERE item_id = ? AND location_id = ?'
-        ).run(quantity, now, req.params.itemId, location_id);
+          'UPDATE item_locations SET quantity = ?, min_qty = ?, updated_at = ? WHERE item_id = ? AND location_id = ?'
+        ).run(quantity, minQtyVal, now, req.params.itemId, location_id);
       } else {
         db.prepare(
-          'INSERT INTO item_locations (id, item_id, location_id, quantity, updated_at) VALUES (?,?,?,?,?)'
-        ).run(uuidv4(), req.params.itemId, location_id, quantity, now);
+          'INSERT INTO item_locations (id, item_id, location_id, quantity, min_qty, updated_at) VALUES (?,?,?,?,?,?)'
+        ).run(uuidv4(), req.params.itemId, location_id, quantity, minQtyVal, now);
       }
 
       // Keep items.quantity in sync with total across all locations
@@ -102,6 +103,35 @@ router.put('/:itemId', (req: Request, res: Response) => {
       WHERE il.item_id = ? AND il.location_id = ?
     `).get(req.params.itemId, location_id);
 
+    res.json({ success: true, data: row });
+  } catch (err) {
+    res.status(500).json({ success: false, error: (err as Error).message });
+  }
+});
+
+// PATCH /item-locations/:itemId/min-qty — update just the min_qty for a location
+// Body: { location_id, min_qty }
+router.patch('/:itemId/min-qty', (req: Request, res: Response) => {
+  try {
+    const { location_id, min_qty } = req.body;
+    if (!location_id || min_qty === undefined) {
+      res.status(400).json({ success: false, error: 'location_id and min_qty are required' });
+      return;
+    }
+    const now = new Date().toISOString();
+    const result = db.prepare(
+      'UPDATE item_locations SET min_qty = ?, updated_at = ? WHERE item_id = ? AND location_id = ?'
+    ).run(parseInt(min_qty), now, req.params.itemId, location_id);
+
+    if (result.changes === 0) {
+      res.status(404).json({ success: false, error: 'item_location row not found' });
+      return;
+    }
+    const row = db.prepare(`
+      SELECT il.*, l.zone, l.aisle, l.bin
+      FROM item_locations il JOIN locations l ON il.location_id = l.id
+      WHERE il.item_id = ? AND il.location_id = ?
+    `).get(req.params.itemId, location_id);
     res.json({ success: true, data: row });
   } catch (err) {
     res.status(500).json({ success: false, error: (err as Error).message });
