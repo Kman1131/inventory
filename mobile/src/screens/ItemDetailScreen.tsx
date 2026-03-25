@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { apiGet, apiPost, itemsApi, categoriesApi, locationsApi, suppliersApi, itemLocationsApi } from '../config/api';
+import { apiGet, apiPost, itemsApi, categoriesApi, locationsApi, suppliersApi, itemLocationsApi, transfersApi } from '../config/api';
 import type { InventoryItem, Transaction, TransactionType, Category, Location, Supplier, ItemLocation } from '../types';
 import type { RootStackParamList } from '../../App';
 
@@ -213,10 +213,19 @@ export function ItemDetailScreen() {
   const [txType, setTxType] = useState<TxType>('IN');
   const [txQty, setTxQty] = useState('');
   const [txNotes, setTxNotes] = useState('');
+  const [txJobNumber, setTxJobNumber] = useState('');
   const [txLocationId, setTxLocationId] = useState<string | null>(initialLocationId ?? null);
   const [showLocPicker, setShowLocPicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  // Transfer form
+  const [activeTab, setActiveTab] = useState<'transaction' | 'transfer'>('transaction');
+  const [trFromLocId, setTrFromLocId] = useState<string | null>(null);
+  const [trToLocId, setTrToLocId] = useState<string | null>(null);
+  const [trQty, setTrQty] = useState('');
+  const [trNotes, setTrNotes] = useState('');
+  const [showTrFromPicker, setShowTrFromPicker] = useState(false);
+  const [showTrToPicker, setShowTrToPicker] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -279,6 +288,28 @@ export function ItemDetailScreen() {
     ]);
   };
 
+  const handleSubmitTransfer = async () => {
+    const qty = parseInt(trQty, 10);
+    if (!trFromLocId || !trToLocId) { Alert.alert('Invalid', 'Select both source and destination locations.'); return; }
+    if (trFromLocId === trToLocId) { Alert.alert('Invalid', 'Source and destination must differ.'); return; }
+    if (!trQty || isNaN(qty) || qty <= 0) { Alert.alert('Invalid', 'Enter a positive quantity.'); return; }
+    const srcRow = itemLocations.find(il => il.location_id === trFromLocId);
+    if (!srcRow || srcRow.quantity < qty) {
+      Alert.alert('Insufficient Stock', `Only ${srcRow?.quantity ?? 0} units at source location.`); return;
+    }
+    setSubmitting(true);
+    try {
+      await transfersApi.createTransfer({ item_id: itemId, from_location_id: trFromLocId, to_location_id: trToLocId, quantity: qty, notes: trNotes || undefined });
+      setTrQty(''); setTrNotes(''); setTrFromLocId(null); setTrToLocId(null);
+      await loadData();
+      Alert.alert('Transferred', 'Stock transferred successfully.');
+    } catch (err) {
+      Alert.alert('Error', (err as Error).message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleSubmitTransaction = async () => {
     const qty = parseInt(txQty, 10);
     if (!txQty || isNaN(qty) || qty === 0) {
@@ -303,11 +334,13 @@ export function ItemDetailScreen() {
         type: txType,
         quantity_delta: txType === 'ADJUSTMENT' ? qty : Math.abs(qty),
         notes: txNotes || undefined,
+        job_number: txJobNumber || undefined,
         location_id: txLocationId || undefined,
         device_id: 'mobile-app',
       });
       setTxQty('');
       setTxNotes('');
+      setTxJobNumber('');
       await loadData();
       Alert.alert('Recorded', `Transaction recorded successfully.`);
     } catch (err) {
@@ -402,7 +435,52 @@ export function ItemDetailScreen() {
           )}
         </View>
 
-        {/* Record Transaction */}
+        {/* Tab selector */}
+        <View style={styles.tabRow}>
+          <TouchableOpacity
+            style={[styles.tabBtn, activeTab === 'transaction' && styles.tabBtnActive]}
+            onPress={() => setActiveTab('transaction')}
+          >
+            <Text style={[styles.tabBtnText, activeTab === 'transaction' && styles.tabBtnTextActive]}>Record</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabBtn, activeTab === 'transfer' && styles.tabBtnActive]}
+            onPress={() => setActiveTab('transfer')}
+          >
+            <Text style={[styles.tabBtnText, activeTab === 'transfer' && styles.tabBtnTextActive]}>Transfer</Text>
+          </TouchableOpacity>
+        </View>
+
+        {activeTab === 'transfer' ? (
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Transfer Stock</Text>
+
+          <Text style={styles.inputLabel}>From Location (has stock)</Text>
+          <TouchableOpacity style={styles.input} onPress={() => setShowTrFromPicker(true)}>
+            <Text style={{ color: trFromLocId ? COLORS.text : '#aaa', fontSize: 15 }}>
+              {trFromLocId ? (() => { const l = itemLocations.find(il => il.location_id === trFromLocId); return l ? `${[l.zone, l.aisle, l.bin].filter(Boolean).join(' › ')} — ${l.quantity} units` : trFromLocId; })() : 'Select source…'}
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={styles.inputLabel}>To Location</Text>
+          <TouchableOpacity style={styles.input} onPress={() => setShowTrToPicker(true)}>
+            <Text style={{ color: trToLocId ? COLORS.text : '#aaa', fontSize: 15 }}>
+              {trToLocId ? (() => { const l = allLocations.find(al => al.id === trToLocId); return l ? [l.zone, l.aisle, l.bin].filter(Boolean).join(' › ') : trToLocId; })() : 'Select destination…'}
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={styles.inputLabel}>Quantity</Text>
+          <TextInput style={styles.input} value={trQty} onChangeText={setTrQty} keyboardType="numeric" placeholder="e.g. 5" />
+
+          <Text style={styles.inputLabel}>Notes (optional)</Text>
+          <TextInput style={[styles.input, styles.inputMulti]} value={trNotes} onChangeText={setTrNotes} placeholder="Reason for transfer…" multiline numberOfLines={2} />
+
+          <TouchableOpacity style={[styles.btn, submitting && styles.btnDisabled]} onPress={handleSubmitTransfer} disabled={submitting}>
+            {submitting ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.btnText}>⇄ Transfer Stock</Text>}
+          </TouchableOpacity>
+        </View>
+        ) : (
+
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Record Transaction</Text>
 
@@ -459,6 +537,14 @@ export function ItemDetailScreen() {
             numberOfLines={2}
           />
 
+          <Text style={styles.inputLabel}>Job Number (optional)</Text>
+          <TextInput
+            style={styles.input}
+            value={txJobNumber}
+            onChangeText={setTxJobNumber}
+            placeholder="e.g. JOB-2024-001"
+          />
+
           <TouchableOpacity
             style={[styles.btn, submitting && styles.btnDisabled]}
             onPress={handleSubmitTransaction}
@@ -470,6 +556,7 @@ export function ItemDetailScreen() {
             }
           </TouchableOpacity>
         </View>
+        )}
 
         {/* Transaction History */}
         <View style={styles.card}>
@@ -490,6 +577,7 @@ export function ItemDetailScreen() {
                   {tx.quantity_delta > 0 ? '+' : ''}{tx.quantity_delta} units
                 </Text>
                 {tx.notes ? <Text style={styles.txNotes}>{tx.notes}</Text> : null}
+                {tx.job_number ? <Text style={[styles.txNotes, { color: '#3949ab' }]}>Job: {tx.job_number}</Text> : null}
                 <Text style={styles.txDate}>{new Date(tx.created_at).toLocaleString()}</Text>
               </View>
             </View>
@@ -524,6 +612,29 @@ export function ItemDetailScreen() {
       labelKey="name"
       onSelect={loc => setTxLocationId(loc?.id ?? null)}
       onClose={() => setShowLocPicker(false)}
+    />
+    {/* Transfer from/to pickers */}
+    <PickerModal
+      visible={showTrFromPicker}
+      title="Transfer From (has stock)"
+      items={itemLocations.filter(il => il.quantity > 0).map(il => ({
+        id: il.location_id,
+        name: `${[il.zone, il.aisle, il.bin].filter(Boolean).join(' › ')} — ${il.quantity} units`,
+      }))}
+      labelKey="name"
+      onSelect={loc => { setTrFromLocId(loc?.id ?? null); if (trToLocId === loc?.id) setTrToLocId(null); }}
+      onClose={() => setShowTrFromPicker(false)}
+    />
+    <PickerModal
+      visible={showTrToPicker}
+      title="Transfer To"
+      items={allLocations.filter(l => l.id !== trFromLocId).map(l => ({
+        id: l.id,
+        name: [l.zone, l.aisle, l.bin].filter(Boolean).join(' › '),
+      }))}
+      labelKey="name"
+      onSelect={loc => setTrToLocId(loc?.id ?? null)}
+      onClose={() => setShowTrToPicker(false)}
     />
     </>
   );
@@ -599,6 +710,11 @@ const styles = StyleSheet.create({
   txQty: { fontSize: 14, fontWeight: '600', color: COLORS.text },
   txNotes: { fontSize: 12, color: COLORS.subtext, marginTop: 2 },
   txDate: { fontSize: 11, color: COLORS.subtext, marginTop: 2 },
+  tabRow: { flexDirection: 'row', marginBottom: 8, borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border },
+  tabBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', backgroundColor: '#fafafa' },
+  tabBtnActive: { backgroundColor: COLORS.primary },
+  tabBtnText: { fontSize: 13, fontWeight: '600', color: COLORS.subtext },
+  tabBtnTextActive: { color: '#fff' },
 });
 
 const editStyles = StyleSheet.create({
