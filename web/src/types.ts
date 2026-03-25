@@ -25,6 +25,7 @@ export interface InventoryItem {
   description: string | null;
   quantity: number;
   min_threshold: number;
+  order_qty: number | null;
   price: number;
   category_id: string | null;
   location_id: string | null;
@@ -64,6 +65,7 @@ export type ItemFormData = {
   description: string;
   quantity: number;
   min_threshold: number;
+  order_qty: number | null;
   price: number;
   category_id: string;
   location_id: string;

@@ -165,7 +165,7 @@ router.post('/auto-generate', (_req: Request, res: Response) => {
         `).run(id, poNumber, supplierId, `Auto-generated. Low stock: ${noteTxt}`, now, now);
 
         for (const item of items) {
-          const qty = Math.max(item.min_threshold - item.quantity + 10, 10);
+          const qty = (item as any).order_qty ?? Math.max(item.min_threshold - item.quantity + 10, 10);
           db.prepare(`
             INSERT INTO purchase_order_items (id, purchase_order_id, item_id, sku, name, quantity_ordered, unit_price, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)

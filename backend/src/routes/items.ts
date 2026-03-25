@@ -92,7 +92,7 @@ router.get('/:id', (req: Request, res: Response) => {
 // POST /items — create item
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { sku, name, description, quantity, min_threshold, price, category_id, location_id, supplier_id } = req.body;
+    const { sku, name, description, quantity, min_threshold, order_qty, price, category_id, location_id, supplier_id } = req.body;
 
     if (!sku || !name) {
       res.status(400).json({ success: false, error: 'sku and name are required' });
@@ -104,13 +104,14 @@ router.post('/', async (req: Request, res: Response) => {
     const qr_code_data = await generateQRCodeData(id);
 
     db.prepare(`
-      INSERT INTO items (id, sku, name, description, quantity, min_threshold, price, category_id, location_id, supplier_id, qr_code_data, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO items (id, sku, name, description, quantity, min_threshold, order_qty, price, category_id, location_id, supplier_id, qr_code_data, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id, sku, name,
       description ?? null,
       quantity ?? 0,
       min_threshold ?? 5,
+      order_qty != null ? order_qty : null,
       price ?? 0,
       category_id ?? null,
       location_id ?? null,
@@ -140,7 +141,7 @@ router.put('/:id', async (req: Request, res: Response) => {
       return;
     }
 
-    const { sku, name, description, min_threshold, price, category_id, location_id, supplier_id } = req.body;
+    const { sku, name, description, min_threshold, order_qty, price, category_id, location_id, supplier_id } = req.body;
     const now = new Date().toISOString();
 
     db.prepare(`
@@ -149,6 +150,7 @@ router.put('/:id', async (req: Request, res: Response) => {
         name = ?,
         description = ?,
         min_threshold = ?,
+        order_qty = ?,
         price = ?,
         category_id = ?,
         location_id = ?,
@@ -160,6 +162,7 @@ router.put('/:id', async (req: Request, res: Response) => {
       name ?? existing.name,
       description !== undefined ? description : existing.description,
       min_threshold ?? existing.min_threshold,
+      order_qty !== undefined ? (order_qty != null ? order_qty : null) : (existing as any).order_qty,
       price ?? existing.price,
       category_id !== undefined ? category_id : existing.category_id,
       location_id !== undefined ? location_id : existing.location_id,

@@ -76,6 +76,7 @@ export function CreateItemScreen({ route }: Props) {
   const [description, setDescription] = useState('');
   const [quantity, setQuantity] = useState('0');
   const [minThreshold, setMinThreshold] = useState('5');
+  const [orderQty, setOrderQty] = useState('');
   const [price, setPrice] = useState('0');
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [locationId, setLocationId] = useState<string | null>(null);
@@ -117,6 +118,7 @@ export function CreateItemScreen({ route }: Props) {
         description: description.trim() || null,
         quantity: parseInt(quantity) || 0,
         min_threshold: parseInt(minThreshold) || 5,
+        order_qty: orderQty.trim() !== '' ? (parseInt(orderQty) || null) : null,
         price: parseFloat(price) || 0,
         category_id: categoryId ?? null,
         location_id: locationId ?? null,
@@ -151,9 +153,18 @@ export function CreateItemScreen({ route }: Props) {
             </View>
           </View>
 
-          <View style={{ width: '50%' }}>
-            <Text style={styles.label}>Unit Price ($)</Text>
-            <TextInput style={styles.input} value={price} onChangeText={setPrice} keyboardType="decimal-pad" placeholderTextColor="#aaa" />
+          <View style={styles.row}>
+            <View style={styles.halfField}>
+              <Text style={styles.label}>Order Qty</Text>
+              <TextInput
+                style={styles.input} value={orderQty} onChangeText={setOrderQty}
+                keyboardType="numeric" placeholderTextColor="#aaa" placeholder="Auto"
+              />
+            </View>
+            <View style={styles.halfField}>
+              <Text style={styles.label}>Unit Price ($)</Text>
+              <TextInput style={styles.input} value={price} onChangeText={setPrice} keyboardType="decimal-pad" placeholderTextColor="#aaa" />
+            </View>
           </View>
 
           {/* Category picker */}

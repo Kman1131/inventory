@@ -119,6 +119,11 @@ if (!itemCols.find(c => c.name === 'supplier_id')) {
   db.exec('ALTER TABLE items ADD COLUMN supplier_id TEXT REFERENCES suppliers(id) ON DELETE SET NULL');
 }
 
+// Migration: add order_qty to items if upgrading from older schema
+if (!itemCols.find(c => c.name === 'order_qty')) {
+  db.exec('ALTER TABLE items ADD COLUMN order_qty INTEGER');
+}
+
 // Migration: add parent_id to locations if upgrading from older schema
 const locCols = db.prepare('PRAGMA table_info(locations)').all() as { name: string }[];
 if (!locCols.find(c => c.name === 'parent_id')) {

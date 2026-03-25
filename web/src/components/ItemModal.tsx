@@ -19,7 +19,7 @@ export default function ItemModal({ open, onClose, onSubmit, item, loading }: It
   const { register, handleSubmit, reset, formState: { errors } } = useForm<ItemFormData>({
     defaultValues: {
       sku: '', name: '', description: '',
-      quantity: 0, min_threshold: 5, price: 0,
+      quantity: 0, min_threshold: 5, order_qty: null, price: 0,
       category_id: '', location_id: '', supplier_id: '',
     },
   })
@@ -83,7 +83,7 @@ export default function ItemModal({ open, onClose, onSubmit, item, loading }: It
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           {/* Quantity — only shown on create */}
           {!isEdit && (
             <div>
@@ -103,6 +103,16 @@ export default function ItemModal({ open, onClose, onSubmit, item, loading }: It
               className="input"
               min={0}
               {...register('min_threshold', { valueAsNumber: true, min: 0 })}
+            />
+          </div>
+          <div>
+            <label className="label">Order Qty</label>
+            <input
+              type="number"
+              className="input"
+              min={1}
+              placeholder="Auto"
+              {...register('order_qty', { setValueAs: v => (v === '' || v == null) ? null : Number(v), min: 1 })}
             />
           </div>
           <div>
