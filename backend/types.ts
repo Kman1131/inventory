@@ -45,6 +45,7 @@ export interface Transaction {
   notes: string | null;
   device_id: string | null;
   location_id: string | null;
+  job_number: string | null;
   created_at: string;
 }
 

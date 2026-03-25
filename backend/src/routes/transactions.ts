@@ -25,7 +25,7 @@ router.get('/:itemId', (req: Request, res: Response) => {
 // POST /transactions — record a stock transaction and update item quantity
 router.post('/', (req: Request, res: Response) => {
   try {
-    const { item_id, type, quantity_delta, notes, device_id, location_id } = req.body;
+    const { item_id, type, quantity_delta, notes, device_id, location_id, job_number } = req.body;
 
     if (!item_id || !type || quantity_delta === undefined) {
       res.status(400).json({ success: false, error: 'item_id, type, and quantity_delta are required' });
@@ -81,9 +81,9 @@ router.post('/', (req: Request, res: Response) => {
       const now = new Date().toISOString();
 
       db.prepare(`
-        INSERT INTO transactions (id, item_id, type, quantity_delta, notes, device_id, location_id, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(id, item_id, type, quantity_delta, notes ?? null, device_id ?? null, location_id ?? null, now);
+        INSERT INTO transactions (id, item_id, type, quantity_delta, notes, device_id, location_id, job_number, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(id, item_id, type, quantity_delta, notes ?? null, device_id ?? null, location_id ?? null, job_number ?? null, now);
 
       if (location_id) {
         // Upsert item_locations row

@@ -129,6 +129,16 @@ const txCols = db.prepare('PRAGMA table_info(transactions)').all() as { name: st
 if (!txCols.find(c => c.name === 'location_id')) {
   db.exec('ALTER TABLE transactions ADD COLUMN location_id TEXT REFERENCES locations(id) ON DELETE SET NULL');
 }
+// Migration: add job_number to transactions
+if (!txCols.find(c => c.name === 'job_number')) {
+  db.exec('ALTER TABLE transactions ADD COLUMN job_number TEXT');
+}
+
+// Migration: add min_qty to item_locations
+const ilCols = db.prepare('PRAGMA table_info(item_locations)').all() as { name: string }[];
+if (!ilCols.find(c => c.name === 'min_qty')) {
+  db.exec('ALTER TABLE item_locations ADD COLUMN min_qty INTEGER NOT NULL DEFAULT 0');
+}
 
 // Migration: add parent_id to locations if upgrading from older schema
 const locCols = db.prepare('PRAGMA table_info(locations)').all() as { name: string }[];
