@@ -130,12 +130,13 @@ router.post('/', (req: Request, res: Response) => {
 router.post('/auto-generate', (_req: Request, res: Response) => {
   try {
     const lowStockItems = db.prepare(`
-      SELECT items.*, suppliers.name as supplier_name
+      SELECT items.*, suppliers.name as supplier_name,
+        COALESCE((SELECT SUM(il.quantity) FROM item_locations il WHERE il.item_id = items.id), items.quantity) AS total_location_qty
       FROM items
       LEFT JOIN suppliers ON items.supplier_id = suppliers.id
-      WHERE items.quantity < items.min_threshold
+      WHERE COALESCE((SELECT SUM(il.quantity) FROM item_locations il WHERE il.item_id = items.id), items.quantity) < items.min_threshold
       ORDER BY items.supplier_id, items.name ASC
-    `).all() as (InventoryItem & { supplier_name?: string })[];
+    `).all() as (InventoryItem & { supplier_name?: string; total_location_qty?: number })[];
 
     if (lowStockItems.length === 0) {
       res.json({ success: true, data: [], message: 'No low-stock items found' });
@@ -157,7 +158,7 @@ router.post('/auto-generate', (_req: Request, res: Response) => {
       for (const [supplierId, items] of groups) {
         const id = uuidv4();
         const poNumber = getNextPoNumber();
-        const noteTxt = items.map(i => `${i.sku} (have ${i.quantity}, need ${i.min_threshold})`).join('; ');
+        const noteTxt = items.map(i => `${i.sku} (have ${(i as any).total_location_qty ?? i.quantity}, need ${i.min_threshold})`).join('; ');
 
         db.prepare(`
           INSERT INTO purchase_orders (id, po_number, supplier_id, status, notes, created_at, updated_at)
@@ -165,7 +166,7 @@ router.post('/auto-generate', (_req: Request, res: Response) => {
         `).run(id, poNumber, supplierId, `Auto-generated. Low stock: ${noteTxt}`, now, now);
 
         for (const item of items) {
-          const qty = (item as any).order_qty ?? Math.max(item.min_threshold - item.quantity + 10, 10);
+          const qty = (item as any).order_qty ?? Math.max(item.min_threshold - ((item as any).total_location_qty ?? item.quantity) + 10, 10);
           db.prepare(`
             INSERT INTO purchase_order_items (id, purchase_order_id, item_id, sku, name, quantity_ordered, unit_price, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)

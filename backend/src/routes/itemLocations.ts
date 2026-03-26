@@ -9,11 +9,15 @@ interface ItemLocationRow {
   item_id: string;
   location_id: string;
   quantity: number;
+  min_qty: number;
   updated_at: string;
   zone?: string;
   aisle?: string | null;
   bin?: string | null;
+  item_name?: string;
+  item_sku?: string;
 }
+
 
 interface StockTransfer {
   id: string;
@@ -30,6 +34,25 @@ interface StockTransfer {
   to_aisle?: string | null;
   to_bin?: string | null;
 }
+
+// GET /item-locations — all item locations across all items (for replenishment config)
+router.get('/', (_req: Request, res: Response) => {
+  try {
+    const rows = db.prepare(`
+      SELECT
+        il.id, il.item_id, il.location_id, il.quantity, il.min_qty, il.updated_at,
+        l.zone, l.aisle, l.bin,
+        i.name AS item_name, i.sku AS item_sku
+      FROM item_locations il
+      JOIN locations l ON il.location_id = l.id
+      JOIN items i ON il.item_id = i.id
+      ORDER BY i.name ASC, l.zone, l.aisle, l.bin
+    `).all() as ItemLocationRow[];
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, error: (err as Error).message });
+  }
+});
 
 // GET /item-locations/:itemId — list all locations with their quantities for an item
 router.get('/:itemId', (req: Request, res: Response) => {

@@ -292,12 +292,27 @@ export default function AdjustmentsPage() {
     enabled: !!selectedId,
   })
 
-  const { register, handleSubmit, watch, reset, formState: { errors } } = useForm<TransactionFormData>({
-    defaultValues: { type: 'IN', quantity_delta: 1, notes: '', job_number: null },
+  const { data: itemLocations = [] } = useQuery<ItemLocation[]>({
+    queryKey: ['item-locations', selectedId],
+    queryFn: () => api.getItemLocations(selectedId),
+    enabled: !!selectedId,
   })
 
-  const txType   = watch('type') as TransactionType
-  const rawDelta = watch('quantity_delta')
+  const { data: allLocations = [] } = useQuery({ queryKey: ['locations'], queryFn: api.getLocations })
+
+  const { register, handleSubmit, watch, reset, setValue, formState: { errors } } = useForm<TransactionFormData>({
+    defaultValues: { type: 'IN', quantity_delta: 1, notes: '', job_number: null, location_id: null },
+  })
+
+  const txType    = watch('type') as TransactionType
+  const rawDelta  = watch('quantity_delta')
+  const locationId = watch('location_id')
+
+  const selectedLocQty = itemLocations.find(l => l.location_id === locationId)?.quantity ?? null
+  const outLocations   = itemLocations.filter(l => l.quantity > 0)
+
+  const locLabel = (zone?: string | null, aisle?: string | null, bin?: string | null) =>
+    [zone, aisle, bin].filter(Boolean).join(' › ') || '—'
 
   const previewQty = (() => {
     if (!selectedItem) return null
@@ -313,7 +328,9 @@ export default function AdjustmentsPage() {
       qc.invalidateQueries({ queryKey: ['items'] })
       qc.invalidateQueries({ queryKey: ['transactions', selectedId] })
       qc.invalidateQueries({ queryKey: ['low-stock'] })
-      reset({ type: txType, quantity_delta: 1, notes: '', job_number: null })
+      qc.invalidateQueries({ queryKey: ['item-locations', selectedId] })
+      qc.invalidateQueries({ queryKey: ['all-item-locations'] })
+      reset({ type: txType, quantity_delta: 1, notes: '', job_number: null, location_id: null })
       toast.success('Transaction recorded')
     },
     onError: (e: Error) => toast.error(e.message),
@@ -373,7 +390,7 @@ export default function AdjustmentsPage() {
               value={selectedId}
               onChange={e => {
                 setSelectedId(e.target.value)
-                reset({ type: 'IN', quantity_delta: 1, notes: '' })
+                reset({ type: 'IN', quantity_delta: 1, notes: '', location_id: null })
               }}
             >
               <option value="">— Select an item —</option>
@@ -425,6 +442,55 @@ export default function AdjustmentsPage() {
               </div>
             </div>
 
+            {/* Location */}
+            {selectedId && (
+              <div>
+                <label className="label">
+                  Location{' '}
+                  {txType === 'IN' || txType === 'OUT'
+                    ? <span className="text-red-500">*</span>
+                    : <span className="text-gray-400 text-xs">(optional)</span>}
+                </label>
+                {txType === 'OUT' ? (
+                  outLocations.length === 0 ? (
+                    <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">No locations with stock found</p>
+                  ) : (
+                    <select
+                      className="input"
+                      {...register('location_id', { required: 'Location is required for Stock Out' })}
+                    >
+                      <option value="">Select location…</option>
+                      {outLocations.map(l => (
+                        <option key={l.location_id} value={l.location_id}>
+                          {locLabel(l.zone, l.aisle, l.bin)} — {l.quantity} in stock
+                        </option>
+                      ))}
+                    </select>
+                  )
+                ) : (
+                  <select
+                    className="input"
+                    {...register('location_id', { required: txType === 'IN' ? 'Location is required for Stock In' : false })}
+                  >
+                    <option value="">
+                      {txType === 'IN' ? 'Select destination location…' : 'No specific location (total only)'}
+                    </option>
+                    {allLocations.map(l => (
+                      <option key={l.id} value={l.id}>
+                        {locLabel(l.zone, l.aisle, l.bin)}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {errors.location_id && (
+                  <p className="mt-1 text-xs text-red-600">{errors.location_id.message}</p>
+                )}
+                {selectedLocQty !== null && txType !== 'IN' && (
+                  <p className="mt-1 text-xs text-gray-500">Stock at this location: <strong>{selectedLocQty}</strong></p>
+                )}
+              </div>
+            )}
+
             {/* Quantity */}
             <div>
               <label className="label">
@@ -438,8 +504,11 @@ export default function AdjustmentsPage() {
                   required: 'Quantity is required',
                   validate: v => {
                     if (!selectedItem) return true
-                    if (txType === 'OUT' && Math.abs(Number(v)) > selectedItem.quantity)
-                      return `Max removable: ${selectedItem.quantity}`
+                    if (txType === 'OUT') {
+                      const cap = selectedLocQty !== null ? selectedLocQty : selectedItem.quantity
+                      if (Math.abs(Number(v)) > cap)
+                        return `Max removable: ${cap}`
+                    }
                     if (txType === 'ADJUSTMENT' && selectedItem.quantity + Number(v) < 0)
                       return 'Result cannot be negative'
                     return true

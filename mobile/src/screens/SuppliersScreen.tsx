@@ -153,7 +153,7 @@ export function SuppliersScreen() {
         ListEmptyComponent={
           !loading ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyIcon}>ðŸ¢</Text>
+              <Text style={styles.emptyIcon}>🏢</Text>
               <Text style={styles.emptyText}>No suppliers yet</Text>
               <Text style={styles.emptyHint}>Tap + to add one</Text>
             </View>
@@ -164,8 +164,8 @@ export function SuppliersScreen() {
             <View style={styles.cardBody}>
               <Text style={styles.name}>{item.name}</Text>
               {item.contact_name && <Text style={styles.sub}>{item.contact_name}</Text>}
-              {item.email && <Text style={styles.sub}>âœ‰ {item.email}</Text>}
-              {item.phone && <Text style={styles.sub}>ðŸ“ž {item.phone}</Text>}
+              {item.email && <Text style={styles.sub}>✉ {item.email}</Text>}
+              {item.phone && <Text style={styles.sub}>📞 {item.phone}</Text>}
             </View>
             <TouchableOpacity style={styles.editBtn} onPress={() => setEditing(item)}>
               <Text style={styles.editTxt}>Edit</Text>

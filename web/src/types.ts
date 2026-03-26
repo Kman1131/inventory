@@ -146,6 +146,8 @@ export interface ItemLocation {
   zone?: string;
   aisle?: string | null;
   bin?: string | null;
+  item_name?: string;
+  item_sku?: string;
 }
 
 export interface StockTransfer {

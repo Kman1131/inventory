@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import Modal from './Modal'
 import { api } from '../api/client'
-import type { InventoryItem, ItemFormData, TransactionFormData } from '../types'
+import type { InventoryItem, ItemFormData, TransactionFormData, ItemLocation } from '../types'
 import { useState } from 'react'
 import ItemModal from './ItemModal'
 import TransactionModal from './TransactionModal'
@@ -13,6 +13,61 @@ interface ItemDetailModalProps {
   onClose: () => void
   item: InventoryItem | null
   onDeleted?: () => void
+}
+
+function LocationMinQtyRow({ il, itemId, isPrimary }: { il: ItemLocation; itemId: string; isPrimary: boolean }) {
+  const qc = useQueryClient()
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(String(il.min_qty ?? 0))
+
+  const mut = useMutation({
+    mutationFn: (min_qty: number) =>
+      api.updateItemLocation(itemId, { location_id: il.location_id, quantity: il.quantity, min_qty }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['item-locations', itemId] })
+      setEditing(false)
+      toast.success('Min qty updated')
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
+
+  const locParts = [il.zone, il.aisle, il.bin].filter(Boolean)
+  const locLabel = locParts.join(' › ') || '—'
+
+  return (
+    <div className="flex items-center gap-2 px-3 py-2 bg-gray-50/50">
+      <span className="text-xs text-gray-700 flex-1">
+        📍 {locLabel}
+        {isPrimary && <span className="ml-1 text-[10px] text-blue-600 font-medium">(primary)</span>}
+      </span>
+      <span className="text-xs font-semibold text-gray-900 mr-3">{il.quantity} units</span>
+      <span className="text-[10px] text-gray-400 mr-1">min:</span>
+      {editing ? (
+        <form
+          className="flex items-center gap-1"
+          onSubmit={e => { e.preventDefault(); mut.mutate(parseInt(draft) || 0) }}
+        >
+          <input
+            type="number"
+            min={0}
+            className="w-14 text-xs border border-blue-400 rounded px-1 py-0.5 text-center"
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            autoFocus
+          />
+          <button type="submit" className="text-xs text-blue-600 font-medium px-1" disabled={mut.isPending}>✓</button>
+          <button type="button" className="text-xs text-gray-400 px-1" onClick={() => { setEditing(false); setDraft(String(il.min_qty ?? 0)) }}>✕</button>
+        </form>
+      ) : (
+        <button
+          className="text-xs text-gray-600 hover:text-blue-600 underline underline-offset-2"
+          onClick={() => { setDraft(String(il.min_qty ?? 0)); setEditing(true) }}
+        >
+          {il.min_qty ?? 0}
+        </button>
+      )}
+    </div>
+  )
 }
 
 export default function ItemDetailModal({ open, onClose, item, onDeleted }: ItemDetailModalProps) {
@@ -142,15 +197,8 @@ export default function ItemDetailModal({ open, onClose, item, onDeleted }: Item
             </p>
           ) : (
             <div className="divide-y divide-gray-100 rounded-lg border border-gray-100 overflow-hidden">
-              {itemLocations.map(il => (
-                <div key={il.id} className="flex items-center justify-between px-3 py-2 bg-gray-50/50">
-                  <span className="text-xs text-gray-700">
-                    📍 {(il as any).zone ?? ''}
-                    {(il as any).aisle ? ` › ${(il as any).aisle}` : ''}
-                    {(il as any).bin ? ` › ${(il as any).bin}` : ''}
-                  </span>
-                  <span className="text-xs font-semibold text-gray-900">{il.quantity} units</span>
-                </div>
+              {itemLocations.map((il: ItemLocation) => (
+                <LocationMinQtyRow key={il.id} il={il} itemId={item.id} isPrimary={item.location_id === il.location_id} />
               ))}
             </div>
           )}

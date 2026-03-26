@@ -140,7 +140,10 @@ export const api = {
 
   // ── Item Locations ─────────────────────────────────────────────────────────
   getItemLocations: (itemId: string) => unwrap<ItemLocation[]>(client().get(`/item-locations/${itemId}`)),
+  getAllItemLocations: () => unwrap<ItemLocation[]>(client().get('/item-locations')),
   getItemLocationQRs: (itemId: string) => unwrap<{ location_id: string; zone: string; aisle: string | null; bin: string | null; quantity: number; qr_data: string }[]>(client().get(`/items/${itemId}/location-qrs`)),
+  updateItemLocation: (itemId: string, data: { location_id: string; quantity: number; min_qty?: number }) =>
+    unwrap<ItemLocation>(client().put(`/item-locations/${itemId}`, data)),
 
   // ── Transfers ──────────────────────────────────────────────────────────────
   getTransfers:     () => unwrap<StockTransfer[]>(client().get('/transfers')),
